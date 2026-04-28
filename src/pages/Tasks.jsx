@@ -3,18 +3,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, CheckSquare, LayoutGrid, List } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
 import TaskFormDialog from '@/components/tasks/TaskFormDialog';
 import TaskColumn from '@/components/tasks/TaskColumn';
+import ReminderButton from '@/components/shared/ReminderButton';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/AuthContext';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'done'];
 
@@ -25,6 +26,7 @@ export default function Tasks() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: tasks = [], isLoading } = useQuery({ queryKey: ['tasks'], queryFn: () => base44.entities.Task.list('-created_date') });
   const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: () => base44.entities.Project.list() });
@@ -49,13 +51,9 @@ export default function Tasks() {
   });
 
   const handleSubmit = (data) => {
-    if (editingTask) {
-      updateMutation.mutate({ id: editingTask.id, data });
-    } else {
-      createMutation.mutate(data);
-    }
+    if (editingTask) updateMutation.mutate({ id: editingTask.id, data });
+    else createMutation.mutate(data);
   };
-
   const handleEdit = (task) => { setEditingTask(task); setDialogOpen(true); };
   const handleDelete = (id) => deleteMutation.mutate(id);
 
@@ -111,10 +109,16 @@ export default function Tasks() {
                   <p className="text-xs text-muted-foreground truncate">{task.description || 'No description'}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <StatusBadge value={task.status} />
                 <StatusBadge value={task.priority} type="priority" />
                 {task.due_date && <span className="text-xs text-muted-foreground hidden sm:inline">{format(new Date(task.due_date), 'MMM d')}</span>}
+                {task.file_attachments?.length > 0 && (
+                  <span className="text-[10px] flex items-center gap-0.5 text-muted-foreground">
+                    <Paperclip className="w-3 h-3" />{task.file_attachments.length}
+                  </span>
+                )}
+                <ReminderButton item={task} entityName="Task" recipientEmail={task.assigned_to || user?.email} onUpdate={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })} />
                 <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(task)}>
                   <Pencil className="w-3 h-3" />
                 </Button>

@@ -32,21 +32,37 @@
       "type": "string"
     },
     "project_id": {
-      "type": "string",
-      "description": "Linked project ID"
+      "type": "string"
     },
     "claim_id": {
-      "type": "string",
-      "description": "Linked claim ID"
+      "type": "string"
     },
     "due_date": {
       "type": "string",
       "format": "date"
     },
+    "reminder_sent": {
+      "type": "boolean",
+      "default": false
+    },
     "tags": {
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "file_attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
       }
     }
   },

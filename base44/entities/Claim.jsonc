@@ -4,79 +4,184 @@
   "properties": {
     "title": {
       "type": "string",
-      "description": "Title of the quality claim"
+      "description": "Title / short description of the claim"
     },
-    "claim_number": {
+    "claim_id": {
       "type": "string",
-      "description": "Unique claim reference number"
+      "description": "Unique claim ID e.g. FSQA-2026-001"
     },
-    "type": {
-      "type": "string",
-      "enum": [
-        "customer_complaint",
-        "supplier_issue",
-        "internal_nonconformance",
-        "regulatory",
-        "recall"
-      ],
-      "description": "Type of claim"
-    },
-    "severity": {
+    "current_status": {
       "type": "string",
       "enum": [
-        "low",
-        "medium",
-        "high",
-        "critical"
+        "UNDER REVIEW",
+        "RESOLVED",
+        "CLOSED",
+        "ON HOLD",
+        "OPEN"
       ],
-      "default": "medium"
+      "default": "UNDER REVIEW"
     },
-    "status": {
+    "fiscal_year": {
+      "type": "number"
+    },
+    "date_of_claim": {
+      "type": "string",
+      "format": "date"
+    },
+    "date_received_by_fsqa": {
+      "type": "string",
+      "format": "date"
+    },
+    "date_of_claim_finalized": {
+      "type": "string",
+      "format": "date"
+    },
+    "claim_lifecycle": {
       "type": "string",
       "enum": [
-        "open",
-        "investigating",
-        "corrective_action",
-        "resolved",
-        "closed"
+        "CLAIM",
+        "COMPLAINT",
+        "INQUIRY"
       ],
-      "default": "open"
+      "default": "CLAIM"
     },
-    "product_name": {
-      "type": "string",
-      "description": "Affected product"
-    },
-    "batch_number": {
+    "claim_conversion": {
       "type": "string"
     },
-    "description": {
-      "type": "string",
-      "description": "Detailed description of the issue"
+    "filing_amount": {
+      "type": "number"
     },
-    "root_cause": {
+    "amount_after_validation": {
+      "type": "number"
+    },
+    "so_number": {
       "type": "string"
     },
-    "corrective_action": {
+    "po_number": {
       "type": "string"
     },
-    "assigned_to": {
+    "customer": {
+      "type": "string"
+    },
+    "supplier": {
+      "type": "string"
+    },
+    "primary_plant": {
+      "type": "string"
+    },
+    "secondary_plant": {
+      "type": "string"
+    },
+    "product_code": {
+      "type": "string"
+    },
+    "proprietary_brand": {
+      "type": "string"
+    },
+    "packaging_configuration": {
+      "type": "string"
+    },
+    "product_category": {
+      "type": "string"
+    },
+    "product_subcategory": {
+      "type": "string"
+    },
+    "product_form": {
+      "type": "string"
+    },
+    "lot_batch_number": {
+      "type": "string"
+    },
+    "production_date": {
       "type": "string",
-      "description": "Email of the person assigned"
+      "format": "date"
+    },
+    "expiration_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "qty_cases_received": {
+      "type": "string"
+    },
+    "qty_cases_at_hand": {
+      "type": "string"
+    },
+    "total_shipment_qty": {
+      "type": "string"
+    },
+    "qty_affected": {
+      "type": "string"
+    },
+    "claim_quality_percentage": {
+      "type": "number"
+    },
+    "root_cause_category": {
+      "type": "string"
+    },
+    "claim_type": {
+      "type": "string"
+    },
+    "claim_subtype": {
+      "type": "string"
+    },
+    "additional_information": {
+      "type": "string"
+    },
+    "attachments_available": {
+      "type": "string"
+    },
+    "capa_report_created": {
+      "type": "string"
+    },
+    "destination_region": {
+      "type": "string"
+    },
+    "destination_country": {
+      "type": "string"
+    },
+    "origin_region": {
+      "type": "string"
+    },
+    "origin_country": {
+      "type": "string"
+    },
+    "seller": {
+      "type": "string"
+    },
+    "purchaser": {
+      "type": "string"
+    },
+    "claims_rep": {
+      "type": "string"
+    },
+    "third_party_surveyor": {
+      "type": "string"
     },
     "due_date": {
       "type": "string",
       "format": "date"
     },
-    "attachments": {
+    "reminder_sent": {
+      "type": "boolean",
+      "default": false
+    },
+    "file_attachments": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
       }
     }
   },
   "required": [
-    "title",
-    "type",
-    "severity"
+    "title"
   ]
 }

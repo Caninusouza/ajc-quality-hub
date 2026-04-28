@@ -3,8 +3,7 @@
   "type": "object",
   "properties": {
     "name": {
-      "type": "string",
-      "description": "Project name"
+      "type": "string"
     },
     "description": {
       "type": "string"
@@ -43,21 +42,64 @@
       "default": "medium"
     },
     "owner": {
-      "type": "string",
-      "description": "Project owner email"
+      "type": "string"
     },
-    "start_date": {
-      "type": "string",
-      "format": "date"
-    },
-    "end_date": {
+    "due_date": {
       "type": "string",
       "format": "date"
     },
     "progress": {
       "type": "number",
-      "default": 0,
-      "description": "Progress percentage 0-100"
+      "default": 0
+    },
+    "reminder_sent": {
+      "type": "boolean",
+      "default": false
+    },
+    "timelines": {
+      "type": "array",
+      "description": "4 project timeline steps",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_progress",
+              "completed"
+            ],
+            "default": "pending"
+          }
+        }
+      }
+    },
+    "file_attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "required": [
