@@ -11,6 +11,13 @@ import SearchableCountrySelect from '@/components/shared/SearchableCountrySelect
 
 const STATUSES = ['UNDER REVIEW', 'OPEN', 'ON HOLD', 'RESOLVED', 'CLOSED'];
 const LIFECYCLES = ['CLAIM', 'COMPLAINT', 'INQUIRY'];
+const CLAIM_TYPES = ['QUALITY', 'COMMERCIAL', 'LOGISTIC', 'OTHER'];
+const CLAIM_SUBTYPES = ['SPOIL', 'FOREIGN', 'S/WGT', 'OTHER', 'MISLABEL', 'DAMAGE', 'SHORT', 'CONTAMINATION', 'TEMP ABUSE', 'PACKAGING'];
+const PRODUCT_CATEGORIES = ['PORK', 'POULTRY', 'BEEF', 'SEAFOOD', 'OTHER'];
+const PRODUCT_FORMS = ['FROZEN', 'FRESH', 'CHILLED', 'PROCESSED', 'OTHER'];
+const ROOT_CAUSE_CATEGORIES = ['SUPPLIER', 'LOGISTICS', 'STORAGE', 'HANDLING', 'UNKNOWN', 'OTHER'];
+const YES_NO = ['YES', 'NO'];
+const REGIONS = ['NORTH AMERICA', 'SOUTH AMERICA', 'CENTRAL AMERICA', 'MCA', 'EUROPE', 'ASIA', 'CHINA', 'MIDDLE EAST', 'AFRICA', 'OCEANIA', 'OTHER'];
 
 const defaultForm = () => ({
   title: '', claim_id: '', current_status: 'UNDER REVIEW', fiscal_year: new Date().getFullYear(),
@@ -34,6 +41,17 @@ function Field({ label, children }) {
       <Label className="text-xs text-muted-foreground uppercase tracking-wide">{label}</Label>
       {children}
     </div>
+  );
+}
+
+function SimpleSelect({ value, onChange, options, placeholder }) {
+  return (
+    <Select value={value || ''} onValueChange={onChange}>
+      <SelectTrigger><SelectValue placeholder={placeholder || 'Select...'} /></SelectTrigger>
+      <SelectContent>
+        {options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -63,6 +81,7 @@ export default function ClaimFormDialog({ open, onOpenChange, onSubmit, initialD
               <TabsTrigger value="attachments" className="flex-1">Files</TabsTrigger>
             </TabsList>
 
+            {/* GENERAL TAB */}
             <TabsContent value="general" className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Title *">
@@ -72,16 +91,16 @@ export default function ClaimFormDialog({ open, onOpenChange, onSubmit, initialD
                   <Input value={form.claim_id} onChange={e => set('claim_id', e.target.value)} placeholder="FSQA-2026-001" />
                 </Field>
                 <Field label="Status">
-                  <Select value={form.current_status} onValueChange={v => set('current_status', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <SimpleSelect value={form.current_status} onChange={v => set('current_status', v)} options={STATUSES} />
                 </Field>
                 <Field label="Lifecycle">
-                  <Select value={form.claim_lifecycle} onValueChange={v => set('claim_lifecycle', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{LIFECYCLES.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <SimpleSelect value={form.claim_lifecycle} onChange={v => set('claim_lifecycle', v)} options={LIFECYCLES} />
+                </Field>
+                <Field label="Claim Type">
+                  <SimpleSelect value={form.claim_type} onChange={v => set('claim_type', v)} options={CLAIM_TYPES} />
+                </Field>
+                <Field label="Claim Subtype">
+                  <SimpleSelect value={form.claim_subtype} onChange={v => set('claim_subtype', v)} options={CLAIM_SUBTYPES} placeholder="Select subtype..." />
                 </Field>
                 <Field label="Date of Claim">
                   <Input type="date" value={form.date_of_claim} onChange={e => set('date_of_claim', e.target.value)} />
@@ -95,63 +114,59 @@ export default function ClaimFormDialog({ open, onOpenChange, onSubmit, initialD
                 <Field label="Date Finalized">
                   <Input type="date" value={form.date_of_claim_finalized} onChange={e => set('date_of_claim_finalized', e.target.value)} />
                 </Field>
-                <Field label="Claim Type">
-                  <Input value={form.claim_type} onChange={e => set('claim_type', e.target.value)} placeholder="e.g. QUALITY" />
-                </Field>
-                <Field label="Claim Subtype">
-                  <Input value={form.claim_subtype} onChange={e => set('claim_subtype', e.target.value)} placeholder="e.g. SPOIL, FOREIGN" />
-                </Field>
-                <Field label="Claims Rep">
-                  <Input value={form.claims_rep} onChange={e => set('claims_rep', e.target.value)} />
-                </Field>
-                <Field label="Root Cause Category">
-                  <Input value={form.root_cause_category} onChange={e => set('root_cause_category', e.target.value)} />
-                </Field>
                 <Field label="Customer">
                   <Input value={form.customer} onChange={e => set('customer', e.target.value)} />
                 </Field>
                 <Field label="Supplier">
                   <Input value={form.supplier} onChange={e => set('supplier', e.target.value)} />
                 </Field>
+                <Field label="Claims Rep">
+                  <Input value={form.claims_rep} onChange={e => set('claims_rep', e.target.value)} />
+                </Field>
+                <Field label="Root Cause Category">
+                  <SimpleSelect value={form.root_cause_category} onChange={v => set('root_cause_category', v)} options={ROOT_CAUSE_CATEGORIES} placeholder="Select root cause..." />
+                </Field>
+                <Field label="CAPA Report Created?">
+                  <SimpleSelect value={form.capa_report_created} onChange={v => set('capa_report_created', v)} options={YES_NO} />
+                </Field>
+                <Field label="3rd Party Surveyor?">
+                  <SimpleSelect value={form.third_party_surveyor} onChange={v => set('third_party_surveyor', v)} options={YES_NO} />
+                </Field>
+                <Field label="Attachments / Photos Available?">
+                  <SimpleSelect value={form.attachments_available} onChange={v => set('attachments_available', v)} options={YES_NO} />
+                </Field>
               </div>
               <Field label="Additional Information">
                 <Textarea value={form.additional_information} onChange={e => set('additional_information', e.target.value)} rows={4} placeholder="Detailed description..." />
               </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="CAPA Report Created?">
-                  <Select value={form.capa_report_created} onValueChange={v => set('capa_report_created', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="YES">YES</SelectItem><SelectItem value="NO">NO</SelectItem></SelectContent>
-                  </Select>
-                </Field>
-                <Field label="3rd Party Surveyor?">
-                  <Select value={form.third_party_surveyor} onValueChange={v => set('third_party_surveyor', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="YES">YES</SelectItem><SelectItem value="NO">NO</SelectItem></SelectContent>
-                  </Select>
-                </Field>
-              </div>
             </TabsContent>
 
+            {/* PRODUCT TAB */}
             <TabsContent value="product" className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Product Category">
-                  <Input value={form.product_category} onChange={e => set('product_category', e.target.value)} placeholder="e.g. PORK, POULTRY" />
+                  <SimpleSelect value={form.product_category} onChange={v => set('product_category', v)} options={PRODUCT_CATEGORIES} placeholder="Select category..." />
                 </Field>
                 <Field label="Product Subcategory">
-                  <Input value={form.product_subcategory} onChange={e => set('product_subcategory', e.target.value)} />
+                  <Input value={form.product_subcategory} onChange={e => set('product_subcategory', e.target.value)} placeholder="e.g. BONE-IN LOIN, CHICKEN PAWS" />
                 </Field>
                 <Field label="Product Code">
                   <Input value={form.product_code} onChange={e => set('product_code', e.target.value)} />
                 </Field>
                 <Field label="Product Form">
-                  <Input value={form.product_form} onChange={e => set('product_form', e.target.value)} placeholder="e.g. FROZEN, FRESH" />
+                  <SimpleSelect value={form.product_form} onChange={v => set('product_form', v)} options={PRODUCT_FORMS} placeholder="Select form..." />
                 </Field>
                 <Field label="Proprietary Brand">
-                  <Input value={form.proprietary_brand} onChange={e => set('proprietary_brand', e.target.value)} placeholder="YES/NO or brand name" />
+                  <Input value={form.proprietary_brand} onChange={e => set('proprietary_brand', e.target.value)} placeholder="YES / NO / Brand name" />
                 </Field>
                 <Field label="Packaging Configuration">
                   <Input value={form.packaging_configuration} onChange={e => set('packaging_configuration', e.target.value)} />
+                </Field>
+                <Field label="Primary Plant">
+                  <Input value={form.primary_plant} onChange={e => set('primary_plant', e.target.value)} placeholder="e.g. 717CR, P-510" />
+                </Field>
+                <Field label="Secondary Plant (if any)">
+                  <Input value={form.secondary_plant} onChange={e => set('secondary_plant', e.target.value)} placeholder="N/A if none" />
                 </Field>
                 <Field label="Lot / Batch Number">
                   <Input value={form.lot_batch_number} onChange={e => set('lot_batch_number', e.target.value)} />
@@ -162,11 +177,8 @@ export default function ClaimFormDialog({ open, onOpenChange, onSubmit, initialD
                 <Field label="Expiration Date">
                   <Input type="date" value={form.expiration_date} onChange={e => set('expiration_date', e.target.value)} />
                 </Field>
-                <Field label="Primary Plant">
-                  <Input value={form.primary_plant} onChange={e => set('primary_plant', e.target.value)} />
-                </Field>
-                <Field label="Secondary Plant">
-                  <Input value={form.secondary_plant} onChange={e => set('secondary_plant', e.target.value)} />
+                <Field label="Claim Quality %">
+                  <Input type="number" value={form.claim_quality_percentage} onChange={e => set('claim_quality_percentage', e.target.value)} step="0.01" placeholder="0.00" />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -182,34 +194,29 @@ export default function ClaimFormDialog({ open, onOpenChange, onSubmit, initialD
                 <Field label="Qty Affected (Cases/Lbs/MT)">
                   <Input value={form.qty_affected} onChange={e => set('qty_affected', e.target.value)} />
                 </Field>
-                <Field label="Claim Quality %">
-                  <Input type="number" value={form.claim_quality_percentage} onChange={e => set('claim_quality_percentage', e.target.value)} step="0.01" />
-                </Field>
               </div>
             </TabsContent>
 
+            {/* FINANCIAL TAB */}
             <TabsContent value="financial" className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
+                <Field label="Fiscal Year">
+                  <Input type="number" value={form.fiscal_year} onChange={e => set('fiscal_year', e.target.value)} />
+                </Field>
+                <Field label="Claim Conversion">
+                  <SimpleSelect value={form.claim_conversion} onChange={v => set('claim_conversion', v)} options={YES_NO} />
+                </Field>
                 <Field label="SO Number">
                   <Input value={form.so_number} onChange={e => set('so_number', e.target.value)} />
                 </Field>
                 <Field label="PO Number">
                   <Input value={form.po_number} onChange={e => set('po_number', e.target.value)} />
                 </Field>
-                <Field label="Fiscal Year">
-                  <Input type="number" value={form.fiscal_year} onChange={e => set('fiscal_year', e.target.value)} />
-                </Field>
-                <Field label="Claim Conversion">
-                  <Select value={form.claim_conversion} onValueChange={v => set('claim_conversion', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="YES">YES</SelectItem><SelectItem value="NO">NO</SelectItem></SelectContent>
-                  </Select>
-                </Field>
                 <Field label="Filing Amount (USD)">
-                  <Input type="number" value={form.filing_amount} onChange={e => set('filing_amount', e.target.value)} step="0.01" />
+                  <Input type="number" value={form.filing_amount} onChange={e => set('filing_amount', e.target.value)} step="0.01" placeholder="0.00" />
                 </Field>
                 <Field label="Amount After Validation (USD)">
-                  <Input type="number" value={form.amount_after_validation} onChange={e => set('amount_after_validation', e.target.value)} step="0.01" />
+                  <Input type="number" value={form.amount_after_validation} onChange={e => set('amount_after_validation', e.target.value)} step="0.01" placeholder="0.00" />
                 </Field>
                 <Field label="Seller">
                   <Input value={form.seller} onChange={e => set('seller', e.target.value)} />
@@ -220,16 +227,17 @@ export default function ClaimFormDialog({ open, onOpenChange, onSubmit, initialD
               </div>
             </TabsContent>
 
+            {/* LOGISTICS TAB */}
             <TabsContent value="logistics" className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Origin Region">
-                  <Input value={form.origin_region} onChange={e => set('origin_region', e.target.value)} />
+                  <SimpleSelect value={form.origin_region} onChange={v => set('origin_region', v)} options={REGIONS} placeholder="Select region..." />
                 </Field>
                 <Field label="Origin Country">
                   <SearchableCountrySelect value={form.origin_country} onChange={v => set('origin_country', v)} />
                 </Field>
                 <Field label="Destination Region">
-                  <Input value={form.destination_region} onChange={e => set('destination_region', e.target.value)} />
+                  <SimpleSelect value={form.destination_region} onChange={v => set('destination_region', v)} options={REGIONS} placeholder="Select region..." />
                 </Field>
                 <Field label="Destination Country">
                   <SearchableCountrySelect value={form.destination_country} onChange={v => set('destination_country', v)} />
@@ -237,6 +245,7 @@ export default function ClaimFormDialog({ open, onOpenChange, onSubmit, initialD
               </div>
             </TabsContent>
 
+            {/* FILES TAB */}
             <TabsContent value="attachments">
               <FileAttachments
                 attachments={form.file_attachments || []}
