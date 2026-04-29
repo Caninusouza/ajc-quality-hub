@@ -56,10 +56,10 @@ function SimpleSelect({ value, onChange, options, placeholder }) {
 }
 
 export default function ClaimFormDialog({ open, onOpenChange, onSubmit, initialData, isSubmitting }) {
-  const [form, setForm] = useState(initialData || defaultForm());
+  const [form, setForm] = useState({ ...defaultForm(), ...(initialData || {}) });
 
   useEffect(() => {
-    setForm(initialData || defaultForm());
+    setForm({ ...defaultForm(), ...(initialData || {}) });
   }, [initialData, open]);
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));

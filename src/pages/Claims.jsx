@@ -17,6 +17,7 @@ import ReminderButton from '@/components/shared/ReminderButton';
 import ReportDialog from '@/components/reports/ReportDialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/AuthContext';
+import { generateNextClaimId } from '@/utils/claimId';
 
 const CLAIM_REPORT_FIELDS = [
   { key: 'claim_id', label: 'Claim ID', type: 'text' },
@@ -89,7 +90,7 @@ export default function Claims() {
 
   return (
     <div>
-      <PageHeader title="Claims" subtitle={`${claims.length} total claims`} actionLabel="New Claim" onAction={() => { setEditingClaim(null); setDialogOpen(true); }}>
+      <PageHeader title="Claims" subtitle={`${claims.length} total claims`} actionLabel="New Claim" onAction={() => { setEditingClaim({ claim_id: generateNextClaimId(claims) }); setDialogOpen(true); }}>
         <Button variant="outline" className="gap-2" onClick={() => setReportOpen(true)}>
           <BarChart2 className="w-4 h-4" />
           Generate Report
@@ -125,7 +126,7 @@ export default function Claims() {
       </PageHeader>
 
       {filtered.length === 0 && !isLoading ? (
-        <EmptyState icon={ShieldAlert} title="No claims found" description="Create a new claim or import from your spreadsheet." actionLabel="New Claim" onAction={() => setDialogOpen(true)} />
+        <EmptyState icon={ShieldAlert} title="No claims found" description="Create a new claim or import from your spreadsheet." actionLabel="New Claim" onAction={() => { setEditingClaim({ claim_id: generateNextClaimId(claims) }); setDialogOpen(true); }} />
       ) : (
         <div className="space-y-2.5">
           {filtered.map(claim => (
@@ -191,6 +192,7 @@ export default function Claims() {
       <SpreadsheetUpload
         open={uploadOpen}
         onOpenChange={setUploadOpen}
+        existingClaims={claims}
         onComplete={() => queryClient.invalidateQueries({ queryKey: ['claims'] })}
       />
       <ReportDialog

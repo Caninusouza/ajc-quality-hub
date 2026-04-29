@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { generateNextClaimId } from '@/utils/claimId';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -69,7 +70,7 @@ function rowToClaim(row) {
   };
 }
 
-export default function SpreadsheetUpload({ open, onOpenChange, onComplete }) {
+export default function SpreadsheetUpload({ open, onOpenChange, onComplete, existingClaims = [] }) {
   const [step, setStep] = useState('idle'); // idle | extracting | preview | importing | done
   const [preview, setPreview] = useState([]);
   const [fileUrl, setFileUrl] = useState(null);
@@ -157,19 +158,29 @@ export default function SpreadsheetUpload({ open, onOpenChange, onComplete }) {
     setStep('importing');
     let created = 0, skipped = 0;
     const errors = [];
+
+    // Build a running list of all claims (existing + newly created) to generate sequential IDs
+    const allClaims = [...existingClaims];
+
     for (const claim of preview) {
       try {
-        // Check if claim_id already exists
+        // Always assign a new sequential ID based on what's already in the hub
+        const newClaimId = generateNextClaimId(allClaims);
+        const claimWithId = { ...claim, claim_id: newClaimId };
+
+        // Push a stub so the next iteration increments correctly
+        allClaims.push({ claim_id: newClaimId });
+
+        // Check if original claim_id already exists → update, otherwise create
         if (claim.claim_id) {
           const existing = await base44.entities.Claim.filter({ claim_id: claim.claim_id });
           if (existing && existing.length > 0) {
-            // Update existing record
-            await base44.entities.Claim.update(existing[0].id, claim);
+            await base44.entities.Claim.update(existing[0].id, claimWithId);
             created++;
             continue;
           }
         }
-        await base44.entities.Claim.create(claim);
+        await base44.entities.Claim.create(claimWithId);
         created++;
       } catch (e) {
         errors.push(claim.claim_id || claim.title);
