@@ -1,0 +1,92 @@
+{
+  "name": "Request",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Short description of the request"
+    },
+    "request_type": {
+      "type": "string",
+      "enum": [
+        "Specification Sheet",
+        "Letter",
+        "Corrective Action",
+        "Certificate",
+        "Audit Report",
+        "Other"
+      ],
+      "default": "Specification Sheet"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the request"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "urgent"
+      ],
+      "default": "medium"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "submitted",
+        "in_review",
+        "in_progress",
+        "pending_info",
+        "completed",
+        "rejected"
+      ],
+      "default": "submitted"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "requested_by_email": {
+      "type": "string",
+      "description": "Email of the person who submitted the request"
+    },
+    "requested_by_name": {
+      "type": "string",
+      "description": "Name of the person who submitted the request"
+    },
+    "fsqa_notes": {
+      "type": "string",
+      "description": "Internal FSQA notes visible to the requester"
+    },
+    "fsqa_assignee": {
+      "type": "string",
+      "enum": [
+        "Rafael Souza",
+        "Gabriela Hidalgo"
+      ]
+    },
+    "file_attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "uploaded_by": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "title",
+    "request_type"
+  ]
+}
