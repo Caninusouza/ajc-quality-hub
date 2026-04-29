@@ -17,13 +17,22 @@ export default function Dashboard() {
   const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: () => base44.entities.Project.list() });
   const { data: tasks = [] } = useQuery({ queryKey: ['tasks'], queryFn: () => base44.entities.Task.list() });
 
-  const openClaims = claims.filter(c => !['RESOLVED', 'CLOSED'].includes(c.current_status));
-  const criticalClaims = claims.filter(c => !['RESOLVED', 'CLOSED'].includes(c.current_status));
+  // Deduplicate by claim_id (same logic as Claims page)
+  const dedupedClaims = Object.values(
+    claims.reduce((acc, c) => {
+      if (!c.claim_id) return { ...acc, [c.id]: c };
+      if (!acc[c.claim_id] || c.updated_date > acc[c.claim_id].updated_date) acc[c.claim_id] = c;
+      return acc;
+    }, {})
+  );
+
+  const openClaims = dedupedClaims.filter(c => !['RESOLVED', 'CLOSED'].includes(c.current_status));
+  const criticalClaims = dedupedClaims.filter(c => !['RESOLVED', 'CLOSED'].includes(c.current_status));
   const activeProjects = projects.filter(p => ['planning', 'in_progress'].includes(p.status));
   const pendingTasks = tasks.filter(t => t.status !== 'done');
 
   const claimsByType = Object.entries(
-    claims.reduce((acc, c) => { acc[c.type] = (acc[c.type] || 0) + 1; return acc; }, {})
+    dedupedClaims.reduce((acc, c) => { acc[c.claim_lifecycle] = (acc[c.claim_lifecycle] || 0) + 1; return acc; }, {})
   ).map(([name, value]) => ({ name: name?.replace(/_/g, ' '), value }));
 
   const tasksByStatus = [
@@ -45,7 +54,7 @@ export default function Dashboard() {
         <StatCard title="Open Claims" value={openClaims.length} icon={ShieldAlert} subtitle={`${criticalClaims.length} critical`} />
         <StatCard title="Active Projects" value={activeProjects.length} icon={FolderKanban} subtitle={`${projects.length} total`} />
         <StatCard title="Pending Tasks" value={pendingTasks.length} icon={CheckSquare} subtitle={`${tasks.filter(t=>t.status==='done').length} completed`} />
-        <StatCard title="Resolution Rate" value={claims.length ? `${Math.round((claims.filter(c=>['RESOLVED','CLOSED'].includes(c.current_status)).length / claims.length) * 100)}%` : '—'} icon={TrendingUp} />
+        <StatCard title="Resolution Rate" value={dedupedClaims.length ? `${Math.round((dedupedClaims.filter(c=>['RESOLVED','CLOSED'].includes(c.current_status)).length / dedupedClaims.length) * 100)}%` : '—'} icon={TrendingUp} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -101,7 +110,7 @@ export default function Dashboard() {
             <Link to="/claims" className="text-xs text-primary hover:underline font-medium">View all</Link>
           </CardHeader>
           <CardContent className="space-y-3">
-            {claims.slice(0, 5).map(claim => (
+            {dedupedClaims.slice(0, 5).map(claim => (
               <Link to={`/claims/${claim.id}`} key={claim.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{claim.title}</p>
@@ -113,7 +122,7 @@ export default function Dashboard() {
                 </div>
               </Link>
             ))}
-            {claims.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">No claims yet</p>}
+            {dedupedClaims.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">No claims yet</p>}
           </CardContent>
         </Card>
 
