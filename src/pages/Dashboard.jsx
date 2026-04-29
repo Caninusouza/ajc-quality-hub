@@ -20,8 +20,10 @@ export default function Dashboard() {
   // Deduplicate by claim_id (same logic as Claims page)
   const dedupedClaims = Object.values(
     claims.reduce((acc, c) => {
-      if (!c.claim_id) return { ...acc, [c.id]: c };
-      if (!acc[c.claim_id] || c.updated_date > acc[c.claim_id].updated_date) acc[c.claim_id] = c;
+      const key = c.claim_id || c.id;
+      if (!acc[key] || c.updated_date > acc[key].updated_date) {
+        acc[key] = c;
+      }
       return acc;
     }, {})
   );
