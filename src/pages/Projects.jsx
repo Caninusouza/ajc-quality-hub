@@ -6,16 +6,28 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Search, FolderKanban, Pencil, Trash2, Calendar, CheckCircle2, Clock, Circle, Paperclip } from 'lucide-react';
+import { Search, FolderKanban, Pencil, Trash2, Calendar, CheckCircle2, Clock, Circle, Paperclip, BarChart2 } from 'lucide-react';
 import { format } from 'date-fns';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
 import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
 import ReminderButton from '@/components/shared/ReminderButton';
+import ReportDialog from '@/components/reports/ReportDialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/AuthContext';
 import { cn } from '@/lib/utils';
+
+const PROJECT_REPORT_FIELDS = [
+  { key: 'name', label: 'Project Name', type: 'text' },
+  { key: 'status', label: 'Status', type: 'select' },
+  { key: 'priority', label: 'Priority', type: 'select' },
+  { key: 'category', label: 'Category', type: 'select' },
+  { key: 'owner', label: 'Owner', type: 'select' },
+  { key: 'progress', label: 'Progress (%)', type: 'text' },
+  { key: 'due_date', label: 'Due Date', type: 'date' },
+  { key: 'description', label: 'Description', type: 'text' },
+];
 
 const stepIcon = { pending: Circle, in_progress: Clock, completed: CheckCircle2 };
 const stepColor = { pending: 'text-muted-foreground', in_progress: 'text-amber-500', completed: 'text-emerald-500' };
@@ -24,6 +36,7 @@ export default function Projects() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -60,6 +73,10 @@ export default function Projects() {
   return (
     <div>
       <PageHeader title="Projects" subtitle="Manage quality improvement projects" actionLabel="New Project" onAction={() => { setEditingProject(null); setDialogOpen(true); }}>
+        <Button variant="outline" className="gap-2" onClick={() => setReportOpen(true)}>
+          <BarChart2 className="w-4 h-4" />
+          Generate Report
+        </Button>
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -155,6 +172,14 @@ export default function Projects() {
         onSubmit={handleSubmit}
         initialData={editingProject}
         isSubmitting={createMutation.isPending || updateMutation.isPending}
+      />
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        title="Projects"
+        data={projects}
+        filterConfig={PROJECT_REPORT_FIELDS}
+        dateField="due_date"
       />
     </div>
   );

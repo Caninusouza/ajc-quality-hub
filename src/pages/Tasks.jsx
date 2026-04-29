@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, CheckSquare, LayoutGrid, List } from 'lucide-react';
+import { Search, CheckSquare, LayoutGrid, List, BarChart2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, Paperclip } from 'lucide-react';
@@ -14,8 +14,19 @@ import EmptyState from '@/components/shared/EmptyState';
 import TaskFormDialog from '@/components/tasks/TaskFormDialog';
 import TaskColumn from '@/components/tasks/TaskColumn';
 import ReminderButton from '@/components/shared/ReminderButton';
+import ReportDialog from '@/components/reports/ReportDialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/AuthContext';
+
+const TASK_REPORT_FIELDS = [
+  { key: 'title', label: 'Task Title', type: 'text' },
+  { key: 'status', label: 'Status', type: 'select' },
+  { key: 'priority', label: 'Priority', type: 'select' },
+  { key: 'assigned_to', label: 'Assigned To', type: 'select' },
+  { key: 'due_date', label: 'Due Date', type: 'date' },
+  { key: 'description', label: 'Description', type: 'text' },
+  { key: 'tags', label: 'Tags', type: 'text' },
+];
 
 const STATUSES = ['todo', 'in_progress', 'review', 'done'];
 
@@ -24,6 +35,7 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [view, setView] = useState('board');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -60,6 +72,10 @@ export default function Tasks() {
   return (
     <div>
       <PageHeader title="Tasks" subtitle="Manage and track your tasks" actionLabel="New Task" onAction={() => { setEditingTask(null); setDialogOpen(true); }}>
+        <Button variant="outline" className="gap-2" onClick={() => setReportOpen(true)}>
+          <BarChart2 className="w-4 h-4" />
+          Generate Report
+        </Button>
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -138,6 +154,14 @@ export default function Tasks() {
         initialData={editingTask}
         projects={projects}
         isSubmitting={createMutation.isPending || updateMutation.isPending}
+      />
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        title="Tasks"
+        data={tasks}
+        filterConfig={TASK_REPORT_FIELDS}
+        dateField="due_date"
       />
     </div>
   );

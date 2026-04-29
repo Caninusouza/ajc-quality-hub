@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, ShieldAlert, Trash2, Pencil, FileSpreadsheet, Paperclip, DollarSign } from 'lucide-react';
+import { Search, ShieldAlert, Trash2, Pencil, FileSpreadsheet, Paperclip, DollarSign, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -14,8 +14,27 @@ import EmptyState from '@/components/shared/EmptyState';
 import ClaimFormDialog from '@/components/claims/ClaimFormDialog';
 import SpreadsheetUpload from '@/components/claims/SpreadsheetUpload';
 import ReminderButton from '@/components/shared/ReminderButton';
+import ReportDialog from '@/components/reports/ReportDialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/AuthContext';
+
+const CLAIM_REPORT_FIELDS = [
+  { key: 'claim_id', label: 'Claim ID', type: 'text' },
+  { key: 'current_status', label: 'Status', type: 'select' },
+  { key: 'claim_lifecycle', label: 'Lifecycle', type: 'select' },
+  { key: 'claim_subtype', label: 'Claim Type', type: 'select' },
+  { key: 'customer', label: 'Customer', type: 'select' },
+  { key: 'supplier', label: 'Supplier', type: 'select' },
+  { key: 'product_category', label: 'Product Category', type: 'select' },
+  { key: 'product_subcategory', label: 'Product Subcategory', type: 'select' },
+  { key: 'primary_plant', label: 'Primary Plant', type: 'select' },
+  { key: 'destination_country', label: 'Destination Country', type: 'select' },
+  { key: 'origin_country', label: 'Origin Country', type: 'select' },
+  { key: 'claims_rep', label: 'Claims Rep', type: 'select' },
+  { key: 'filing_amount', label: 'Filing Amount', type: 'text' },
+  { key: 'date_of_claim', label: 'Date of Claim', type: 'date' },
+  { key: 'date_of_claim_finalized', label: 'Date Finalized', type: 'date' },
+];
 
 const statusStyles = {
   'UNDER REVIEW': 'bg-amber-50 text-amber-700 border-amber-200',
@@ -31,6 +50,7 @@ export default function Claims() {
   const [lifecycleFilter, setLifecycleFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [editingClaim, setEditingClaim] = useState(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -70,6 +90,10 @@ export default function Claims() {
   return (
     <div>
       <PageHeader title="Claims" subtitle={`${claims.length} total claims`} actionLabel="New Claim" onAction={() => { setEditingClaim(null); setDialogOpen(true); }}>
+        <Button variant="outline" className="gap-2" onClick={() => setReportOpen(true)}>
+          <BarChart2 className="w-4 h-4" />
+          Generate Report
+        </Button>
         <Button variant="outline" className="gap-2" onClick={() => setUploadOpen(true)}>
           <FileSpreadsheet className="w-4 h-4" />
           Import Spreadsheet
@@ -168,6 +192,14 @@ export default function Claims() {
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         onComplete={() => queryClient.invalidateQueries({ queryKey: ['claims'] })}
+      />
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        title="Claims"
+        data={claims}
+        filterConfig={CLAIM_REPORT_FIELDS}
+        dateField="date_of_claim"
       />
     </div>
   );
