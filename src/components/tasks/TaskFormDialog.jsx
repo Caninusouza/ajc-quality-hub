@@ -70,7 +70,7 @@ export default function TaskFormDialog({ open, onOpenChange, onSubmit, initialDa
 
                 <div>
                   <Label>FSQA Representative</Label>
-                  <Select value={form.fsqa_assignee || ''} onValueChange={v => { set('fsqa_assignee', v); set('assigned_to', FSQA_REPS[v] || ''); }}>
+                  <Select value={form.fsqa_assignee || ''} onValueChange={v => setForm(prev => ({ ...prev, fsqa_assignee: v, assigned_to: FSQA_REPS[v] || '' }))}>
                     <SelectTrigger><SelectValue placeholder="Select representative..." /></SelectTrigger>
                     <SelectContent>
                       {Object.keys(FSQA_REPS).map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
@@ -79,7 +79,7 @@ export default function TaskFormDialog({ open, onOpenChange, onSubmit, initialDa
                 </div>
                 <div>
                   <Label>Representative Email</Label>
-                  <Input value={FSQA_REPS[form.fsqa_assignee] || ''} readOnly className="bg-muted text-muted-foreground" placeholder="Auto-populated" />
+                  <Input value={FSQA_REPS[form.fsqa_assignee] || ''} disabled className="bg-muted text-muted-foreground cursor-not-allowed opacity-100" placeholder="Auto-populated" />
                 </div>
                 <div>
                   <Label>Due Date</Label>

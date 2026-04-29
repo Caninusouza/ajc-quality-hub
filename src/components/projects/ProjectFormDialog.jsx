@@ -100,7 +100,7 @@ export default function ProjectFormDialog({ open, onOpenChange, onSubmit, initia
                 </div>
                 <div>
                   <Label>Representative Email</Label>
-                  <Input value={FSQA_REPS[form.fsqa_assignee] || ''} readOnly className="bg-muted text-muted-foreground" placeholder="Auto-populated" />
+                  <Input value={FSQA_REPS[form.fsqa_assignee] || ''} disabled className="bg-muted text-muted-foreground cursor-not-allowed opacity-100" placeholder="Auto-populated" />
                 </div>
                 <div className="col-span-2">
                   <Label>Due Date</Label>

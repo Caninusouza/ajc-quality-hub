@@ -140,10 +140,10 @@ export default function ClaimFormDialog({ open, onOpenChange, onSubmit, initialD
                   <SimpleSelect value={form.attachments_available} onChange={v => set('attachments_available', v)} options={YES_NO} />
                 </Field>
                 <Field label="FSQA Representative">
-                  <SimpleSelect value={form.fsqa_assignee} onChange={v => { set('fsqa_assignee', v); set('claims_rep', FSQA_REPS[v] || ''); }} options={Object.keys(FSQA_REPS)} placeholder="Select representative..." />
+                  <SimpleSelect value={form.fsqa_assignee} onChange={v => setForm(prev => ({ ...prev, fsqa_assignee: v, claims_rep: FSQA_REPS[v] || '' }))} options={Object.keys(FSQA_REPS)} placeholder="Select representative..." />
                 </Field>
                 <Field label="FSQA Representative Email">
-                  <Input value={FSQA_REPS[form.fsqa_assignee] || ''} readOnly className="bg-muted text-muted-foreground" placeholder="Auto-populated from representative" />
+                  <Input value={FSQA_REPS[form.fsqa_assignee] || ''} disabled className="bg-muted text-muted-foreground cursor-not-allowed opacity-100" placeholder="Auto-populated from representative" />
                 </Field>
               </div>
               <Field label="Additional Information">
