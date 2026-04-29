@@ -14,7 +14,11 @@ const creatorCardBg = {
   'rsouza@ajcgroup.com': 'bg-blue-50',
   'ghidalgo@ajcgroup.com': 'bg-pink-50',
 };
-const getCardBg = (item) => assigneeCardBg[item.fsqa_assignee] || creatorCardBg[item.created_by] || '';
+const repEmails = {
+  'rsouza@ajcgroup.com': 'bg-blue-50',
+  'ghidalgo@ajcgroup.com': 'bg-pink-50',
+};
+const getCardBg = (item) => assigneeCardBg[item.fsqa_assignee] || repEmails[item.assigned_to] || repEmails[item.created_by] || '';
 
 const columnColors = {
   todo: 'border-t-slate-400',
