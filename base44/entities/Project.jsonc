@@ -56,6 +56,14 @@
       "type": "boolean",
       "default": false
     },
+    "fsqa_assignee": {
+      "type": "string",
+      "description": "FSQA team member assigned to this project",
+      "enum": [
+        "Rafael Souza",
+        "Gabriela Hidalgo"
+      ]
+    },
     "timelines": {
       "type": "array",
       "description": "4 project timeline steps",

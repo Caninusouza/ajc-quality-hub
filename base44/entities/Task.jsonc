@@ -45,6 +45,14 @@
       "type": "boolean",
       "default": false
     },
+    "fsqa_assignee": {
+      "type": "string",
+      "description": "FSQA team member assigned to this task",
+      "enum": [
+        "Rafael Souza",
+        "Gabriela Hidalgo"
+      ]
+    },
     "tags": {
       "type": "array",
       "items": {

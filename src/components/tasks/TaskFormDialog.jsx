@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileAttachments from '@/components/shared/FileAttachments';
 
+const FSQA_PEOPLE = ['Rafael Souza', 'Gabriela Hidalgo'];
 const STATUSES = ['todo', 'in_progress', 'review', 'done'];
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
@@ -66,6 +67,15 @@ export default function TaskFormDialog({ open, onOpenChange, onSubmit, initialDa
                 <div>
                   <Label>Assigned To</Label>
                   <Input value={form.assigned_to} onChange={e => set('assigned_to', e.target.value)} placeholder="Email" />
+                </div>
+                <div>
+                  <Label>FSQA Assignee</Label>
+                  <Select value={form.fsqa_assignee || ''} onValueChange={v => set('fsqa_assignee', v)}>
+                    <SelectTrigger><SelectValue placeholder="Select assignee..." /></SelectTrigger>
+                    <SelectContent>
+                      {FSQA_PEOPLE.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label>Due Date</Label>

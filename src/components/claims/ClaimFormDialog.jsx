@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileAttachments from '@/components/shared/FileAttachments';
 import SearchableCountrySelect from '@/components/shared/SearchableCountrySelect';
 
+const FSQA_PEOPLE = ['Rafael Souza', 'Gabriela Hidalgo'];
 const STATUSES = ['UNDER REVIEW', 'OPEN', 'ON HOLD', 'RESOLVED', 'CLOSED'];
 const LIFECYCLES = ['CLAIM', 'COMPLAINT', 'INQUIRY'];
 const CLAIM_TYPES = ['QUALITY', 'COMMERCIAL', 'LOGISTIC', 'OTHER'];
@@ -134,6 +135,9 @@ export default function ClaimFormDialog({ open, onOpenChange, onSubmit, initialD
                 </Field>
                 <Field label="Attachments / Photos Available?">
                   <SimpleSelect value={form.attachments_available} onChange={v => set('attachments_available', v)} options={YES_NO} />
+                </Field>
+                <Field label="FSQA Assignee">
+                  <SimpleSelect value={form.fsqa_assignee} onChange={v => set('fsqa_assignee', v)} options={FSQA_PEOPLE} placeholder="Select assignee..." />
                 </Field>
               </div>
               <Field label="Additional Information">

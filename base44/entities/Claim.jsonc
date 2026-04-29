@@ -166,6 +166,14 @@
       "type": "boolean",
       "default": false
     },
+    "fsqa_assignee": {
+      "type": "string",
+      "description": "FSQA team member assigned to this claim",
+      "enum": [
+        "Rafael Souza",
+        "Gabriela Hidalgo"
+      ]
+    },
     "file_attachments": {
       "type": "array",
       "items": {
