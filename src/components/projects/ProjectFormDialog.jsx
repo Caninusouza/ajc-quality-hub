@@ -10,7 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectTimelines from './ProjectTimelines';
 import FileAttachments from '@/components/shared/FileAttachments';
 
-const FSQA_PEOPLE = ['Rafael Souza', 'Gabriela Hidalgo'];
+const FSQA_REPS = {
+  'Rafael Souza': 'rsouza@ajcgroup.com',
+  'Gabriela Hidalgo': 'ghidalgo@ajcgroup.com',
+};
 const CATEGORIES = [
   { value: 'quality_improvement', label: 'Quality Improvement' },
   { value: 'compliance', label: 'Compliance' },
@@ -87,13 +90,17 @@ export default function ProjectFormDialog({ open, onOpenChange, onSubmit, initia
                   <Input value={form.owner} onChange={e => set('owner', e.target.value)} placeholder="Owner email" />
                 </div>
                 <div>
-                  <Label>FSQA Assignee</Label>
+                  <Label>FSQA Representative</Label>
                   <Select value={form.fsqa_assignee || ''} onValueChange={v => set('fsqa_assignee', v)}>
-                    <SelectTrigger><SelectValue placeholder="Select assignee..." /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select representative..." /></SelectTrigger>
                     <SelectContent>
-                      {FSQA_PEOPLE.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      {Object.keys(FSQA_REPS).map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label>Representative Email</Label>
+                  <Input value={FSQA_REPS[form.fsqa_assignee] || ''} readOnly className="bg-muted text-muted-foreground" placeholder="Auto-populated" />
                 </div>
                 <div className="col-span-2">
                   <Label>Due Date</Label>

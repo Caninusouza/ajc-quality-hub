@@ -8,7 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileAttachments from '@/components/shared/FileAttachments';
 
-const FSQA_PEOPLE = ['Rafael Souza', 'Gabriela Hidalgo'];
+const FSQA_REPS = {
+  'Rafael Souza': 'rsouza@ajcgroup.com',
+  'Gabriela Hidalgo': 'ghidalgo@ajcgroup.com',
+};
 const STATUSES = ['todo', 'in_progress', 'review', 'done'];
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
@@ -64,18 +67,19 @@ export default function TaskFormDialog({ open, onOpenChange, onSubmit, initialDa
                     <SelectContent>{PRIORITIES.map(p => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+
                 <div>
-                  <Label>Assigned To</Label>
-                  <Input value={form.assigned_to} onChange={e => set('assigned_to', e.target.value)} placeholder="Email" />
-                </div>
-                <div>
-                  <Label>FSQA Assignee</Label>
-                  <Select value={form.fsqa_assignee || ''} onValueChange={v => set('fsqa_assignee', v)}>
-                    <SelectTrigger><SelectValue placeholder="Select assignee..." /></SelectTrigger>
+                  <Label>FSQA Representative</Label>
+                  <Select value={form.fsqa_assignee || ''} onValueChange={v => { set('fsqa_assignee', v); set('assigned_to', FSQA_REPS[v] || ''); }}>
+                    <SelectTrigger><SelectValue placeholder="Select representative..." /></SelectTrigger>
                     <SelectContent>
-                      {FSQA_PEOPLE.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      {Object.keys(FSQA_REPS).map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label>Representative Email</Label>
+                  <Input value={FSQA_REPS[form.fsqa_assignee] || ''} readOnly className="bg-muted text-muted-foreground" placeholder="Auto-populated" />
                 </div>
                 <div>
                   <Label>Due Date</Label>
