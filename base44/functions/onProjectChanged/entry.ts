@@ -35,6 +35,23 @@ Deno.serve(async (req) => {
 
     await base44.asServiceRole.integrations.Core.SendEmail({ to: email, subject, body });
 
+    // Send confirmation to the creator/updater
+    const user = await base44.auth.me();
+    if (user?.email && user.email !== email) {
+      const confirmSubject = `[FSQA] Confirmation: Project notification sent to ${data.fsqa_assignee}`;
+      const confirmBody = [
+        `Hi ${user.full_name || user.email},`,
+        '',
+        `This is a confirmation that a notification email was successfully sent to <strong>${data.fsqa_assignee}</strong> (${email}) regarding the following project:`,
+        '',
+        `<strong>Project:</strong> ${data.name}`,
+        data.status ? `<strong>Status:</strong> ${data.status}` : '',
+        data.priority ? `<strong>Priority:</strong> ${data.priority}` : '',
+        data.due_date ? `<strong>Due Date:</strong> ${data.due_date}` : '',
+      ].filter(Boolean).join('<br/>');
+      await base44.asServiceRole.integrations.Core.SendEmail({ to: user.email, subject: confirmSubject, body: confirmBody });
+    }
+
     return Response.json({ success: true, sent_to: email });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
