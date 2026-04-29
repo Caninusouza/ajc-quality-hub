@@ -18,7 +18,27 @@ Deno.serve(async (req) => {
 
     // Skip all emails on updates if the acting user is the assignee (they made the change themselves)
     const user = await base44.auth.me();
-    if (event.type === 'update' && user?.email === email) return Response.json({ skipped: 'actor is the assignee' });
+    if (event.type === 'update' && user?.email === email) {
+      // BUT: if the task was just completed, notify the creator (if different from assignee)
+      if (data.status === 'done' && data.created_by && data.created_by !== email) {
+        const completionSubject = `[FSQA] Task completed: ${data.title}`;
+        const completionBody = [
+          `Hi,`,
+          '',
+          `The task assigned to <strong>${data.fsqa_assignee}</strong> has been marked as <strong>completed</strong>.`,
+          '',
+          `<strong>Task:</strong> ${data.title}`,
+          data.priority ? `<strong>Priority:</strong> ${data.priority}` : '',
+          data.due_date ? `<strong>Due Date:</strong> ${data.due_date}` : '',
+          data.description ? `<strong>Description:</strong> ${data.description}` : '',
+          '',
+          'Please log in to the FSQA system to review the details.',
+        ].filter(Boolean).join('<br/>');
+        await base44.asServiceRole.integrations.Core.SendEmail({ to: data.created_by, subject: completionSubject, body: completionBody });
+        return Response.json({ success: true, completion_notice_sent_to: data.created_by });
+      }
+      return Response.json({ skipped: 'actor is the assignee' });
+    }
 
     const action = event.type === 'create' ? 'assigned to you' : 'updated';
     const subject = `[FSQA] Task ${action}: ${data.title}`;
