@@ -159,28 +159,25 @@ export default function SpreadsheetUpload({ open, onOpenChange, onComplete, exis
     let created = 0, skipped = 0;
     const errors = [];
 
-    // Build a running list of all claims (existing + newly created) to generate sequential IDs
+    // Build a running list to track IDs for sequential generation of truly new claims
     const allClaims = [...existingClaims];
 
     for (const claim of preview) {
       try {
-        // Always assign a new sequential ID based on what's already in the hub
-        const newClaimId = generateNextClaimId(allClaims);
-        const claimWithId = { ...claim, claim_id: newClaimId };
-
-        // Push a stub so the next iteration increments correctly
-        allClaims.push({ claim_id: newClaimId });
-
-        // Check if original claim_id already exists → update, otherwise create
+        // Check if this claim already exists in the hub (match by claim_id)
         if (claim.claim_id) {
           const existing = await base44.entities.Claim.filter({ claim_id: claim.claim_id });
           if (existing && existing.length > 0) {
-            await base44.entities.Claim.update(existing[0].id, claimWithId);
+            // Merge: keep the hub's claim_id, update all other fields from the spreadsheet
+            await base44.entities.Claim.update(existing[0].id, { ...claim, claim_id: existing[0].claim_id });
             created++;
             continue;
           }
         }
-        await base44.entities.Claim.create(claimWithId);
+        // Truly new claim — assign next sequential ID
+        const newClaimId = generateNextClaimId(allClaims);
+        allClaims.push({ claim_id: newClaimId });
+        await base44.entities.Claim.create({ ...claim, claim_id: newClaimId });
         created++;
       } catch (e) {
         errors.push(claim.claim_id || claim.title);
@@ -234,21 +231,36 @@ export default function SpreadsheetUpload({ open, onOpenChange, onComplete, exis
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">{preview.length} claims found — review before importing</p>
-              <Badge variant="outline">{preview.length} records</Badge>
+              <div className="flex gap-1.5">
+                {(() => {
+                  const existingIds = new Set(existingClaims.map(c => c.claim_id).filter(Boolean));
+                  const dupes = preview.filter(c => c.claim_id && existingIds.has(c.claim_id)).length;
+                  const newCount = preview.length - dupes;
+                  return <>
+                    {dupes > 0 && <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">{dupes} will merge</Badge>}
+                    {newCount > 0 && <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">{newCount} new</Badge>}
+                  </>;
+                })()}
+              </div>
             </div>
             <div className="max-h-72 overflow-y-auto border rounded-lg divide-y text-xs">
-              {preview.map((c, i) => (
-                <div key={i} className="px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-muted/30">
-                  <div className="min-w-0">
-                    <span className="font-mono text-primary font-medium">{c.claim_id}</span>
-                    <span className="ml-2 text-muted-foreground truncate">{c.customer}</span>
+              {preview.map((c, i) => {
+                const existingIds = new Set(existingClaims.map(x => x.claim_id).filter(Boolean));
+                const isDupe = c.claim_id && existingIds.has(c.claim_id);
+                return (
+                  <div key={i} className={`px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-muted/30 ${isDupe ? 'bg-amber-50/50' : ''}`}>
+                    <div className="min-w-0">
+                      <span className="font-mono text-primary font-medium">{c.claim_id}</span>
+                      <span className="ml-2 text-muted-foreground truncate">{c.customer}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isDupe && <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">merge</Badge>}
+                      <Badge variant="outline" className="text-[10px]">{c.claim_subtype}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{c.current_status}</Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Badge variant="outline" className="text-[10px]">{c.claim_subtype}</Badge>
-                    <Badge variant="outline" className="text-[10px]">{c.current_status}</Badge>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <Button variant="outline" onClick={() => setStep('idle')}>Back</Button>
