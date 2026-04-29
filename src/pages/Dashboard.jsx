@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import StatCard from '@/components/shared/StatCard';
 import StatusBadge from '@/components/shared/StatusBadge';
+import DueRemindersRunner from '@/components/shared/DueRemindersRunner';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 const COLORS = ['hsl(172, 50%, 36%)', 'hsl(210, 60%, 50%)', 'hsl(40, 85%, 55%)', 'hsl(340, 65%, 55%)', 'hsl(270, 55%, 55%)'];
@@ -34,6 +35,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      <DueRemindersRunner />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">Food quality management overview</p>
