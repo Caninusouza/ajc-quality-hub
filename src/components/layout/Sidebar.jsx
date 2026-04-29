@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShieldAlert, FolderKanban, CheckSquare, Menu, X, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, ShieldAlert, FolderKanban, CheckSquare, Menu, X, ChevronRight, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -9,6 +9,7 @@ const navItems = [
   { label: 'Claims', icon: ShieldAlert, path: '/claims' },
   { label: 'Projects', icon: FolderKanban, path: '/projects' },
   { label: 'Tasks', icon: CheckSquare, path: '/tasks' },
+  { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
 ];
 
 export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) {

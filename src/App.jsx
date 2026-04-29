@@ -10,6 +10,7 @@ import Dashboard from '@/pages/Dashboard';
 import Claims from '@/pages/Claims';
 import Projects from '@/pages/Projects';
 import Tasks from '@/pages/Tasks';
+import CalendarPage from '@/pages/CalendarPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -42,6 +43,7 @@ const AuthenticatedApp = () => {
         <Route path="/claims" element={<Claims />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/tasks" element={<Tasks />} />
+        <Route path="/calendar" element={<CalendarPage />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
