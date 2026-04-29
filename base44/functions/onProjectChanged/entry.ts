@@ -16,9 +16,9 @@ Deno.serve(async (req) => {
     const email = FSQA_PEOPLE[data.fsqa_assignee];
     if (!email) return Response.json({ skipped: 'unknown assignee' });
 
-    // Skip all emails if the person making the change IS the assignee
+    // Skip all emails on updates if the acting user is the assignee (they made the change themselves)
     const user = await base44.auth.me();
-    if (user?.email === email) return Response.json({ skipped: 'actor is the assignee' });
+    if (event.type === 'update' && user?.email === email) return Response.json({ skipped: 'actor is the assignee' });
 
     const action = event.type === 'create' ? 'assigned to you' : 'updated';
     const subject = `[FSQA] Project ${action}: ${data.name}`;
