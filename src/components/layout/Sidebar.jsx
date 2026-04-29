@@ -21,7 +21,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
           <ShieldAlert className="w-4 h-4 text-sidebar-primary-foreground" />
         </div>
         {!collapsed && (
-          <span className="font-bold text-base text-sidebar-foreground tracking-tight">QualityHub</span>
+          <span className="font-bold text-base text-sidebar-foreground tracking-tight">AJC FSQA Hub</span>
         )}
       </div>
 
