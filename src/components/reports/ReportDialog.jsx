@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import SearchableCountrySelect from '@/components/shared/SearchableCountrySelect';
 import { Badge } from '@/components/ui/badge';
 import { Download, Filter, X, FileText } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
@@ -116,7 +117,13 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
             {filterConfig.map(f => (
               <div key={f.key} className="space-y-1">
                 <Label className="text-xs">{f.label}</Label>
-                {f.type === 'select' ? (
+                {f.type === 'country' ? (
+                  <SearchableCountrySelect
+                    value={fieldFilters[f.key] || ''}
+                    onChange={v => setFilter(f.key, v)}
+                    placeholder={`All ${f.label}`}
+                  />
+                ) : f.type === 'select' ? (
                   <Select value={fieldFilters[f.key] || 'all'} onValueChange={v => setFilter(f.key, v)}>
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue placeholder={`All ${f.label}`} />
