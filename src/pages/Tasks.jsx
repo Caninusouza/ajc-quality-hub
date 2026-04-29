@@ -30,6 +30,11 @@ const TASK_REPORT_FIELDS = [
 
 const STATUSES = ['todo', 'in_progress', 'review', 'done'];
 
+const assigneeCardBg = {
+  'Rafael Souza': 'bg-blue-50',
+  'Gabriela Hidalgo': 'bg-pink-50',
+};
+
 export default function Tasks() {
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -118,7 +123,7 @@ export default function Tasks() {
       ) : (
         <div className="space-y-2">
           {filtered.map(task => (
-            <Card key={task.id} className="p-3 flex items-center justify-between gap-3 hover:shadow-sm transition-shadow">
+            <Card key={task.id} className={`p-3 flex items-center justify-between gap-3 hover:shadow-sm transition-shadow ${assigneeCardBg[task.fsqa_assignee] || ''}`}>
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{task.title}</p>

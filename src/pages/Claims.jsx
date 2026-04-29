@@ -37,6 +37,11 @@ const CLAIM_REPORT_FIELDS = [
   { key: 'date_of_claim_finalized', label: 'Date Finalized', type: 'date' },
 ];
 
+const assigneeCardBg = {
+  'Rafael Souza': 'bg-blue-50',
+  'Gabriela Hidalgo': 'bg-pink-50',
+};
+
 const statusStyles = {
   'UNDER REVIEW': 'bg-amber-50 text-amber-700 border-amber-200',
   'OPEN': 'bg-blue-50 text-blue-700 border-blue-200',
@@ -141,7 +146,7 @@ export default function Claims() {
       ) : (
         <div className="space-y-2.5">
           {filtered.map(claim => (
-            <Card key={claim.id} className="p-4 hover:shadow-md transition-shadow">
+            <Card key={claim.id} className={`p-4 hover:shadow-md transition-shadow ${assigneeCardBg[claim.fsqa_assignee] || ''}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-1.5">

@@ -6,6 +6,11 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+const assigneeCardBg = {
+  'Rafael Souza': 'bg-blue-50',
+  'Gabriela Hidalgo': 'bg-pink-50',
+};
+
 const columnColors = {
   todo: 'border-t-slate-400',
   in_progress: 'border-t-amber-400',
@@ -31,7 +36,7 @@ export default function TaskColumn({ status, tasks, onEdit, onDelete, onStatusCh
       </div>
       <div className="space-y-2.5 flex-1">
         {tasks.map(task => (
-          <Card key={task.id} className="p-3 hover:shadow-md transition-shadow cursor-default group">
+          <Card key={task.id} className={`p-3 hover:shadow-md transition-shadow cursor-default group ${assigneeCardBg[task.fsqa_assignee] || ''}`}>
             <div className="flex items-start justify-between mb-2">
               <h4 className="text-sm font-medium leading-snug">{task.title}</h4>
               <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">

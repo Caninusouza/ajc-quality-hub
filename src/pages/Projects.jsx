@@ -29,6 +29,11 @@ const PROJECT_REPORT_FIELDS = [
   { key: 'description', label: 'Description', type: 'text' },
 ];
 
+const assigneeCardBg = {
+  'Rafael Souza': 'bg-blue-50',
+  'Gabriela Hidalgo': 'bg-pink-50',
+};
+
 const stepIcon = { pending: Circle, in_progress: Clock, completed: CheckCircle2 };
 const stepColor = { pending: 'text-muted-foreground', in_progress: 'text-amber-500', completed: 'text-emerald-500' };
 
@@ -101,7 +106,7 @@ export default function Projects() {
           {filtered.map(project => {
             const steps = project.timelines || [];
             return (
-              <Card key={project.id} className="p-5 hover:shadow-md transition-shadow flex flex-col gap-4">
+              <Card key={project.id} className={`p-5 hover:shadow-md transition-shadow flex flex-col gap-4 ${assigneeCardBg[project.fsqa_assignee] || ''}`}>
                 <div className="flex items-start justify-between">
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-sm truncate">{project.name}</h3>
