@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileAttachments from '@/components/shared/FileAttachments';
+import SearchableCountrySelect from '@/components/shared/SearchableCountrySelect';
 
 const STATUSES = ['UNDER REVIEW', 'OPEN', 'ON HOLD', 'RESOLVED', 'CLOSED'];
 const LIFECYCLES = ['CLAIM', 'COMPLAINT', 'INQUIRY'];
@@ -225,13 +226,13 @@ export default function ClaimFormDialog({ open, onOpenChange, onSubmit, initialD
                   <Input value={form.origin_region} onChange={e => set('origin_region', e.target.value)} />
                 </Field>
                 <Field label="Origin Country">
-                  <Input value={form.origin_country} onChange={e => set('origin_country', e.target.value)} />
+                  <SearchableCountrySelect value={form.origin_country} onChange={v => set('origin_country', v)} />
                 </Field>
                 <Field label="Destination Region">
                   <Input value={form.destination_region} onChange={e => set('destination_region', e.target.value)} />
                 </Field>
                 <Field label="Destination Country">
-                  <Input value={form.destination_country} onChange={e => set('destination_country', e.target.value)} />
+                  <SearchableCountrySelect value={form.destination_country} onChange={v => set('destination_country', v)} />
                 </Field>
               </div>
             </TabsContent>
