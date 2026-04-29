@@ -74,7 +74,18 @@ export default function Claims() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['claims'] }); toast.success('Claim deleted'); }
   });
 
-  const filtered = claims.filter(c => {
+  // Deduplicate by claim_id — keep the most recently updated record
+  const deduped = Object.values(
+    claims.reduce((acc, c) => {
+      if (!c.claim_id) return { ...acc, [c.id]: c };
+      if (!acc[c.claim_id] || c.updated_date > acc[c.claim_id].updated_date) {
+        acc[c.claim_id] = c;
+      }
+      return acc;
+    }, {})
+  );
+
+  const filtered = deduped.filter(c => {
     const q = search.toLowerCase();
     const matchSearch = !search || [c.title, c.claim_id, c.customer, c.supplier, c.product_category, c.claims_rep]
       .some(v => v?.toLowerCase().includes(q));

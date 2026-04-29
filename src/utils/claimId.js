@@ -9,7 +9,7 @@ export function generateNextClaimId(existingClaims) {
   let maxNum = 0;
   for (const claim of existingClaims) {
     const match = (claim.claim_id || '').trim().match(pattern);
-    if (match) {
+    if (match && parseInt(match[1], 10) === year) {
       const num = parseInt(match[2], 10);
       if (!isNaN(num) && num > maxNum) maxNum = num;
     }
