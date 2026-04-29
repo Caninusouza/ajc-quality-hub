@@ -17,8 +17,8 @@ export default function Dashboard() {
   const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: () => base44.entities.Project.list() });
   const { data: tasks = [] } = useQuery({ queryKey: ['tasks'], queryFn: () => base44.entities.Task.list() });
 
-  const openClaims = claims.filter(c => !['resolved', 'closed'].includes(c.status));
-  const criticalClaims = claims.filter(c => c.severity === 'critical' && c.status !== 'closed');
+  const openClaims = claims.filter(c => !['RESOLVED', 'CLOSED'].includes(c.current_status));
+  const criticalClaims = claims.filter(c => !['RESOLVED', 'CLOSED'].includes(c.current_status));
   const activeProjects = projects.filter(p => ['planning', 'in_progress'].includes(p.status));
   const pendingTasks = tasks.filter(t => t.status !== 'done');
 
@@ -45,7 +45,7 @@ export default function Dashboard() {
         <StatCard title="Open Claims" value={openClaims.length} icon={ShieldAlert} subtitle={`${criticalClaims.length} critical`} />
         <StatCard title="Active Projects" value={activeProjects.length} icon={FolderKanban} subtitle={`${projects.length} total`} />
         <StatCard title="Pending Tasks" value={pendingTasks.length} icon={CheckSquare} subtitle={`${tasks.filter(t=>t.status==='done').length} completed`} />
-        <StatCard title="Resolution Rate" value={claims.length ? `${Math.round((claims.filter(c=>['resolved','closed'].includes(c.status)).length / claims.length) * 100)}%` : '—'} icon={TrendingUp} />
+        <StatCard title="Resolution Rate" value={claims.length ? `${Math.round((claims.filter(c=>['RESOLVED','CLOSED'].includes(c.current_status)).length / claims.length) * 100)}%` : '—'} icon={TrendingUp} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
