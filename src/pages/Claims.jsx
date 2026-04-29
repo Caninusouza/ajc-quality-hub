@@ -41,6 +41,11 @@ const assigneeCardBg = {
   'Rafael Souza': 'bg-blue-50',
   'Gabriela Hidalgo': 'bg-pink-50',
 };
+const creatorCardBg = {
+  'rsouza@ajcgroup.com': 'bg-blue-50',
+  'ghidalgo@ajcgroup.com': 'bg-pink-50',
+};
+const getCardBg = (item) => assigneeCardBg[item.fsqa_assignee] || creatorCardBg[item.created_by] || '';
 
 const statusStyles = {
   'UNDER REVIEW': 'bg-amber-50 text-amber-700 border-amber-200',
@@ -146,7 +151,7 @@ export default function Claims() {
       ) : (
         <div className="space-y-2.5">
           {filtered.map(claim => (
-            <Card key={claim.id} className={`p-4 hover:shadow-md transition-shadow ${assigneeCardBg[claim.fsqa_assignee] || ''}`}>
+            <Card key={claim.id} className={`p-4 hover:shadow-md transition-shadow ${getCardBg(claim)}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-1.5">
