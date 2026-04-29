@@ -39,8 +39,9 @@ Deno.serve(async (req) => {
 
     await base44.asServiceRole.integrations.Core.SendEmail({ to: email, subject, body });
 
-    // Send confirmation to the creator/updater
-    if (user?.email && user.email !== email) {
+    // Send confirmation to the creator/updater — skip if actor is an FSQA rep (they don't need a confirmation)
+    const actorIsFsqa = user?.email && Object.values(FSQA_PEOPLE).includes(user.email);
+    if (user?.email && user.email !== email && !actorIsFsqa) {
       const confirmSubject = `[FSQA] Confirmation: Project notification sent to ${data.fsqa_assignee}`;
       const confirmBody = [
         `Hi ${user.full_name || user.email},`,
