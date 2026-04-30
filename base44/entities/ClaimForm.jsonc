@@ -1,0 +1,115 @@
+{
+  "name": "ClaimForm",
+  "type": "object",
+  "properties": {
+    "claim_number": {
+      "type": "string",
+      "description": "Manually assigned claim number by FSQA (e.g. FSQA-2026-001)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "submitted",
+        "under_review",
+        "in_progress",
+        "resolved",
+        "closed"
+      ],
+      "default": "submitted"
+    },
+    "customer_company": {
+      "type": "string"
+    },
+    "customer_address": {
+      "type": "string"
+    },
+    "contact_person": {
+      "type": "string"
+    },
+    "contact_email": {
+      "type": "string"
+    },
+    "so_number": {
+      "type": "string"
+    },
+    "supplier_name": {
+      "type": "string"
+    },
+    "product_name": {
+      "type": "string"
+    },
+    "issue_description": {
+      "type": "string"
+    },
+    "lot_batch_number": {
+      "type": "string"
+    },
+    "purchase_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "quantity_affected": {
+      "type": "string"
+    },
+    "claim_type": {
+      "type": "string",
+      "enum": [
+        "Quality Defect",
+        "Foreign Material",
+        "Labeling Issue",
+        "Short Weight / Count",
+        "Temperature Abuse",
+        "Packaging Damage",
+        "Other"
+      ]
+    },
+    "supporting_evidence": {
+      "type": "string",
+      "description": "Description of evidence provided"
+    },
+    "requested_resolution": {
+      "type": "string",
+      "enum": [
+        "Credit / Refund",
+        "Replacement Product",
+        "Return Authorization",
+        "Investigation Only",
+        "Other"
+      ]
+    },
+    "additional_comments": {
+      "type": "string"
+    },
+    "file_attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "fsqa_notes": {
+      "type": "string"
+    },
+    "fsqa_assignee": {
+      "type": "string",
+      "enum": [
+        "Rafael Souza",
+        "Gabriela Hidalgo"
+      ]
+    }
+  },
+  "required": [
+    "customer_company",
+    "contact_person",
+    "contact_email",
+    "product_name",
+    "issue_description"
+  ]
+}

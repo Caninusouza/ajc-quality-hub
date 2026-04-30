@@ -13,6 +13,8 @@ import Tasks from '@/pages/Tasks';
 import CalendarPage from '@/pages/CalendarPage';
 import Requests from '@/pages/Requests';
 import MyRequests from '@/pages/MyRequests';
+import ClaimFormPortal from '@/pages/ClaimFormPortal';
+import ClaimForms from '@/pages/ClaimForms';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -47,8 +49,10 @@ const AuthenticatedApp = () => {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/requests" element={<Requests />} />
+        <Route path="/claim-forms" element={<ClaimForms />} />
       </Route>
       <Route path="/my-requests" element={<MyRequests />} />
+      <Route path="/claim-form" element={<ClaimFormPortal />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

@@ -1,0 +1,25 @@
+{
+  "name": "InviteCode",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "Unique invite code"
+    },
+    "used_by_email": {
+      "type": "string",
+      "description": "Email of the customer who used this code"
+    },
+    "is_used": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes e.g. which customer this was issued for"
+    }
+  },
+  "required": [
+    "code"
+  ]
+}
