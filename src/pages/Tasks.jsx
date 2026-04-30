@@ -22,10 +22,12 @@ const TASK_REPORT_FIELDS = [
   { key: 'title', label: 'Task Title', type: 'text' },
   { key: 'status', label: 'Status', type: 'select' },
   { key: 'priority', label: 'Priority', type: 'select' },
-  { key: 'assigned_to', label: 'Assigned To', type: 'select' },
+  { key: 'fsqa_assignee', label: 'FSQA Assignee', type: 'select' },
+  { key: 'assigned_to', label: 'Assigned To', type: 'text' },
+  { key: 'created_date', label: 'Created', type: 'date' },
   { key: 'due_date', label: 'Due Date', type: 'date' },
+  { key: 'updated_date', label: 'Last Updated', type: 'date' },
   { key: 'description', label: 'Description', type: 'text' },
-  { key: 'tags', label: 'Tags', type: 'text' },
 ];
 
 const STATUSES = ['todo', 'in_progress', 'review', 'done'];
@@ -175,7 +177,13 @@ export default function Tasks() {
         title="Tasks"
         data={tasks}
         filterConfig={TASK_REPORT_FIELDS}
-        dateField="due_date"
+        dateField="created_date"
+        resolutionConfig={{
+          resolvedStatus: ['done'],
+          statusKey: 'status',
+          createdField: 'created_date',
+          resolvedField: 'updated_date',
+        }}
       />
     </div>
   );

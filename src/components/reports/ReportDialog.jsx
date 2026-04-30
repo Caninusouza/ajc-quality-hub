@@ -7,10 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import SearchableCountrySelect from '@/components/shared/SearchableCountrySelect';
 import { Badge } from '@/components/ui/badge';
 import { Download, Filter, X, FileText, FileDown } from 'lucide-react';
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, differenceInDays } from 'date-fns';
 import { jsPDF } from 'jspdf';
 
-export default function ReportDialog({ open, onOpenChange, title, data, filterConfig, dateField = 'created_date' }) {
+// resolvedStatusKey: which status field value means "resolved"
+// createdField / resolvedField: date fields for computing resolution time
+export default function ReportDialog({
+  open, onOpenChange, title, data, filterConfig, dateField = 'created_date',
+  resolutionConfig = null,  // { resolvedStatus, statusKey, createdField, resolvedField }
+}) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [fieldFilters, setFieldFilters] = useState({});
@@ -19,7 +24,6 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
     setFieldFilters(prev => ({ ...prev, [key]: value === 'all' ? '' : value }));
   };
 
-  // Unique values for each filterable field
   const uniqueValues = useMemo(() => {
     const result = {};
     filterConfig.forEach(f => {
@@ -32,7 +36,6 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
 
   const filtered = useMemo(() => {
     return data.filter(item => {
-      // Date range filter
       if (dateFrom || dateTo) {
         const raw = item[dateField];
         if (!raw) return false;
@@ -40,7 +43,6 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
         if (dateFrom && date < startOfDay(parseISO(dateFrom))) return false;
         if (dateTo && date > endOfDay(parseISO(dateTo))) return false;
       }
-      // Field filters
       for (const [key, value] of Object.entries(fieldFilters)) {
         if (!value) continue;
         const itemVal = (item[key] || '').toString().toLowerCase();
@@ -49,6 +51,48 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
       return true;
     });
   }, [data, dateFrom, dateTo, fieldFilters, dateField]);
+
+  // Resolution analytics derived from filtered data
+  const resolutionStats = useMemo(() => {
+    if (!resolutionConfig) return null;
+    const { resolvedStatus, statusKey, createdField, resolvedField } = resolutionConfig;
+
+    const resolved = filtered.filter(item => {
+      const s = item[statusKey];
+      return Array.isArray(resolvedStatus) ? resolvedStatus.includes(s) : s === resolvedStatus;
+    });
+
+    const items = resolved.map(item => {
+      const start = item[createdField] ? parseISO(item[createdField]) : null;
+      const end = item[resolvedField] ? parseISO(item[resolvedField]) : null;
+      const days = start && end ? Math.max(0, differenceInDays(end, start)) : null;
+      return { label: item.title || item.claim_id || item.name || item.id, days };
+    }).filter(i => i.days !== null);
+
+    if (!items.length) return null;
+
+    const avg = items.reduce((s, i) => s + i.days, 0) / items.length;
+    const max = Math.max(...items.map(i => i.days));
+    const min = Math.min(...items.map(i => i.days));
+
+    // Bucket into ranges
+    const buckets = [
+      { label: '0–3 days', count: 0 },
+      { label: '4–7 days', count: 0 },
+      { label: '8–14 days', count: 0 },
+      { label: '15–30 days', count: 0 },
+      { label: '30+ days', count: 0 },
+    ];
+    items.forEach(({ days }) => {
+      if (days <= 3) buckets[0].count++;
+      else if (days <= 7) buckets[1].count++;
+      else if (days <= 14) buckets[2].count++;
+      else if (days <= 30) buckets[3].count++;
+      else buckets[4].count++;
+    });
+
+    return { items, avg, max, min, total: items.length, buckets };
+  }, [filtered, resolutionConfig]);
 
   const exportCSV = () => {
     if (!filtered.length) return;
@@ -79,113 +123,264 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
 
-    // ── HEADER BACKGROUND ──────────────────────────────────────────────
-    // Navy gradient bar
-    doc.setFillColor(26, 54, 93); // deep navy
-    doc.rect(0, 0, pageW, 70, 'F');
-
-    // Orange accent stripe
-    doc.setFillColor(234, 88, 12); // accent orange
-    doc.rect(0, 66, pageW, 6, 'F');
-
-    // Load AJC logo via canvas
+    // ── Load AJC logo first ──
+    let logoDataUrl = null;
+    let logoW = 0;
+    const logoH = 38;
     try {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = 'https://media.base44.com/images/public/69f10cbc7366891a2d7229d7/cb8fdd247_AJC.png';
-      });
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'https://media.base44.com/images/public/69f10cbc7366891a2d7229d7/cb8fdd247_AJC.png'; });
       const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      const dataUrl = canvas.toDataURL('image/png');
-      // Draw logo (height 40pt, keep aspect ratio)
-      const logoH = 40;
-      const logoW = (img.width / img.height) * logoH;
-      doc.addImage(dataUrl, 'PNG', 24, 15, logoW, logoH);
-    } catch (_) { /* logo failed, skip */ }
+      canvas.width = img.width; canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      logoDataUrl = canvas.toDataURL('image/png');
+      logoW = (img.width / img.height) * logoH;
+    } catch (_) {}
 
-    // Report title & subtitle
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor(255, 255, 255);
-    doc.text(`${title} Report`, pageW / 2, 30, { align: 'center' });
+    // ── PAGE 1: Analytics (only if resolutionStats available) ──
+    let analyticsPage = false;
+    if (resolutionStats) {
+      analyticsPage = true;
+      drawHeader(doc, pageW, logoDataUrl, logoW, logoH, `${title} — Resolution Analytics`);
+      const dateRange = (dateFrom || dateTo)
+        ? `${dateFrom ? format(parseISO(dateFrom), 'MMM d, yyyy') : 'Beginning'} – ${dateTo ? format(parseISO(dateTo), 'MMM d, yyyy') : 'Today'}`
+        : 'All dates';
+      drawSubtitle(doc, pageW, `Generated: ${format(new Date(), 'MMMM d, yyyy')}   |   Date range: ${dateRange}   |   Resolved records: ${resolutionStats.total}`);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(180, 205, 230);
-    const dateRange = (dateFrom || dateTo)
+      const startY = 95;
+
+      // ── KPI Cards ──
+      const kpis = [
+        { label: 'Records Resolved', value: String(resolutionStats.total), color: [26, 54, 93] },
+        { label: 'Avg Resolution Time', value: `${resolutionStats.avg.toFixed(1)} days`, color: [234, 88, 12] },
+        { label: 'Fastest Resolution', value: `${resolutionStats.min} day${resolutionStats.min !== 1 ? 's' : ''}`, color: [16, 130, 80] },
+        { label: 'Slowest Resolution', value: `${resolutionStats.max} day${resolutionStats.max !== 1 ? 's' : ''}`, color: [180, 30, 30] },
+      ];
+
+      const kpiW = (pageW - 48 - 18) / 4;
+      kpis.forEach((kpi, i) => {
+        const kx = 24 + i * (kpiW + 6);
+        doc.setFillColor(...kpi.color);
+        doc.roundedRect(kx, startY, kpiW, 60, 6, 6, 'F');
+        doc.setFillColor(255, 255, 255, 0.15);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(20);
+        doc.setTextColor(255, 255, 255);
+        doc.text(kpi.value, kx + kpiW / 2, startY + 28, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(220, 230, 245);
+        doc.text(kpi.label, kx + kpiW / 2, startY + 46, { align: 'center' });
+      });
+
+      // ── Bar Chart: Distribution ──
+      const chartY = startY + 80;
+      const chartH = 130;
+      const chartX = 24;
+      const chartW = pageW - 48;
+      const buckets = resolutionStats.buckets;
+      const maxCount = Math.max(...buckets.map(b => b.count), 1);
+      const barW = (chartW - 40) / buckets.length;
+      const COLORS = [
+        [26, 54, 93],
+        [234, 88, 12],
+        [16, 130, 80],
+        [140, 60, 180],
+        [200, 50, 50],
+      ];
+
+      // Chart background
+      doc.setFillColor(245, 248, 255);
+      doc.roundedRect(chartX, chartY, chartW, chartH + 50, 8, 8, 'F');
+
+      // Chart title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(26, 54, 93);
+      doc.text('Resolution Time Distribution', chartX + chartW / 2, chartY + 16, { align: 'center' });
+
+      // Y-axis gridlines
+      const gridCount = 4;
+      doc.setDrawColor(210, 220, 240);
+      doc.setLineWidth(0.5);
+      for (let g = 0; g <= gridCount; g++) {
+        const gy = chartY + 28 + chartH - (g / gridCount) * chartH;
+        doc.line(chartX + 30, gy, chartX + chartW - 10, gy);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(140, 150, 170);
+        doc.text(String(Math.round((g / gridCount) * maxCount)), chartX + 26, gy + 2, { align: 'right' });
+      }
+
+      // Bars
+      buckets.forEach((b, i) => {
+        const bx = chartX + 30 + i * barW + barW * 0.1;
+        const bw = barW * 0.8;
+        const bh = b.count > 0 ? (b.count / maxCount) * chartH : 0;
+        const by = chartY + 28 + chartH - bh;
+
+        // Bar shadow
+        doc.setFillColor(0, 0, 0, 0.08);
+        doc.roundedRect(bx + 2, by + 2, bw, bh || 2, 3, 3, 'F');
+
+        // Bar
+        doc.setFillColor(...COLORS[i]);
+        doc.roundedRect(bx, by, bw, bh || 2, 3, 3, 'F');
+
+        // Count label on top
+        if (b.count > 0) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8);
+          doc.setTextColor(...COLORS[i]);
+          doc.text(String(b.count), bx + bw / 2, by - 4, { align: 'center' });
+        }
+
+        // X label
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(60, 70, 90);
+        doc.text(b.label, bx + bw / 2, chartY + 28 + chartH + 12, { align: 'center' });
+      });
+
+      // ── Horizontal bar chart: top 10 longest items ──
+      const top10 = [...resolutionStats.items].sort((a, b) => b.days - a.days).slice(0, 10);
+      if (top10.length > 0) {
+        const detailY = chartY + chartH + 75;
+        const detailH = top10.length * 18 + 30;
+
+        doc.setFillColor(245, 248, 255);
+        doc.roundedRect(chartX, detailY, chartW, detailH, 8, 8, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(26, 54, 93);
+        doc.text('Longest Resolution Times (Top 10)', chartX + chartW / 2, detailY + 16, { align: 'center' });
+
+        const maxDays = top10[0].days;
+        const barAreaX = chartX + 180;
+        const barAreaW = chartW - 200;
+
+        top10.forEach((item, i) => {
+          const iy = detailY + 28 + i * 18;
+          const bw = maxDays > 0 ? (item.days / maxDays) * barAreaW : 0;
+
+          // Label
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(40, 55, 80);
+          const labelText = item.label.length > 28 ? item.label.slice(0, 26) + '…' : item.label;
+          doc.text(labelText, chartX + 10, iy + 9);
+
+          // Bar bg
+          doc.setFillColor(220, 228, 245);
+          doc.roundedRect(barAreaX, iy + 2, barAreaW, 10, 2, 2, 'F');
+
+          // Bar fill — color by days
+          const col = item.days <= 7 ? [16, 130, 80] : item.days <= 14 ? [234, 88, 12] : [180, 30, 30];
+          doc.setFillColor(...col);
+          doc.roundedRect(barAreaX, iy + 2, bw, 10, 2, 2, 'F');
+
+          // Day label
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(6.5);
+          doc.setTextColor(...col);
+          doc.text(`${item.days}d`, barAreaX + bw + 4, iy + 10);
+        });
+      }
+
+      drawFooter(doc, pageW, pageH, 1);
+      doc.addPage();
+    }
+
+    // ── PAGE 2+: Data Table ──
+    drawHeader(doc, pageW, logoDataUrl, logoW, logoH, `${title} Report — Data`);
+    const dateRange2 = (dateFrom || dateTo)
       ? `${dateFrom ? format(parseISO(dateFrom), 'MMM d, yyyy') : 'Beginning'} – ${dateTo ? format(parseISO(dateTo), 'MMM d, yyyy') : 'Today'}`
       : 'All dates';
-    doc.text(`Generated: ${format(new Date(), 'MMMM d, yyyy')}   |   Date range: ${dateRange}   |   Records: ${filtered.length}`, pageW / 2, 50, { align: 'center' });
+    drawSubtitle(doc, pageW, `Generated: ${format(new Date(), 'MMMM d, yyyy')}   |   Date range: ${dateRange2}   |   Records: ${filtered.length}`);
 
-    // ── TABLE ──────────────────────────────────────────────────────────
     const cols = filterConfig;
-    const startY = 90;
-    const rowH = 22;
-    const colPad = 8;
+    const tableStartX = 24;
     const tableW = pageW - 48;
-    const colW = tableW / cols.length;
+    const colPad = 6;
+    const fontSize = 6.5;
+    const headerFontSize = 7;
 
-    // Column header background
-    doc.setFillColor(26, 54, 93);
-    doc.rect(24, startY, tableW, rowH, 'F');
+    // ── Compute column widths based on content ──
+    doc.setFontSize(fontSize);
+    const colWidths = cols.map(col => {
+      // measure header
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(headerFontSize);
+      let maxW = doc.getTextWidth(col.label.toUpperCase()) + colPad * 2;
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(255, 255, 255);
-    cols.forEach((col, i) => {
-      const x = 24 + i * colW + colPad;
-      doc.text(col.label.toUpperCase(), x, startY + 14, { maxWidth: colW - colPad * 2 });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(fontSize);
+      filtered.slice(0, 50).forEach(item => {
+        const raw = item[col.key];
+        let cellText = '';
+        if (raw == null || raw === '') cellText = '—';
+        else if (col.type === 'date') {
+          try { cellText = format(parseISO(String(raw)), 'MMM d, yyyy'); } catch { cellText = String(raw); }
+        } else if (typeof raw === 'number') cellText = raw.toLocaleString();
+        else cellText = String(raw);
+        const w = doc.getTextWidth(cellText) + colPad * 2;
+        if (w > maxW) maxW = w;
+      });
+      return Math.min(Math.max(maxW, 40), 160); // min 40, max 160
     });
 
-    // Rows
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    let y = startY + rowH;
-    let page = 1;
+    // Scale colWidths to fit tableW
+    const totalRaw = colWidths.reduce((a, b) => a + b, 0);
+    const scaledWidths = colWidths.map(w => (w / totalRaw) * tableW);
+
+    const rowH = 18;
+    let y = 95;
+    let page = analyticsPage ? 2 : 1;
+
+    const drawTableHeader = (yy) => {
+      doc.setFillColor(26, 54, 93);
+      doc.rect(tableStartX, yy, tableW, rowH + 2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(headerFontSize);
+      doc.setTextColor(255, 255, 255);
+      let xOff = tableStartX;
+      cols.forEach((col, i) => {
+        doc.text(col.label.toUpperCase(), xOff + colPad, yy + 13, { maxWidth: scaledWidths[i] - colPad });
+        xOff += scaledWidths[i];
+      });
+    };
+
+    drawTableHeader(y);
+    y += rowH + 2;
 
     filtered.forEach((item, rowIdx) => {
-      if (y + rowH > pageH - 40) {
-        // Footer on current page
+      if (y + rowH > pageH - 36) {
         drawFooter(doc, pageW, pageH, page);
         doc.addPage();
         page++;
-        y = 30;
-
-        // Re-draw column headers
-        doc.setFillColor(26, 54, 93);
-        doc.rect(24, y, tableW, rowH, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7.5);
-        doc.setTextColor(255, 255, 255);
-        cols.forEach((col, i) => {
-          doc.text(col.label.toUpperCase(), 24 + i * colW + colPad, y + 14, { maxWidth: colW - colPad * 2 });
-        });
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        y += rowH;
+        y = 20;
+        drawTableHeader(y);
+        y += rowH + 2;
       }
 
-      // Alternating row background
-      if (rowIdx % 2 === 0) {
-        doc.setFillColor(240, 245, 255);
-      } else {
-        doc.setFillColor(255, 255, 255);
-      }
-      doc.rect(24, y, tableW, rowH, 'F');
+      // Row bg
+      doc.setFillColor(rowIdx % 2 === 0 ? [240, 245, 255] : [255, 255, 255]);
+      if (rowIdx % 2 === 0) doc.setFillColor(240, 245, 255);
+      else doc.setFillColor(255, 255, 255);
+      doc.rect(tableStartX, y, tableW, rowH, 'F');
 
-      // Left accent bar for even rows
+      // Left accent
       if (rowIdx % 2 === 0) {
         doc.setFillColor(234, 88, 12);
-        doc.rect(24, y, 3, rowH, 'F');
+        doc.rect(tableStartX, y, 3, rowH, 'F');
       }
 
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(fontSize);
       doc.setTextColor(30, 41, 59);
+
+      let xOff = tableStartX;
       cols.forEach((col, i) => {
         const raw = item[col.key];
         let cellText = '';
@@ -195,19 +390,20 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
         } else if (typeof raw === 'number') cellText = raw.toLocaleString();
         else cellText = String(raw);
 
-        doc.text(cellText, 24 + i * colW + colPad + (rowIdx % 2 === 0 ? 3 : 0), y + 14, { maxWidth: colW - colPad * 2 });
+        const xText = xOff + colPad + (rowIdx % 2 === 0 && i === 0 ? 3 : 0);
+        doc.text(cellText, xText, y + 12, { maxWidth: scaledWidths[i] - colPad * 2 });
+        xOff += scaledWidths[i];
       });
 
       // Bottom border
-      doc.setDrawColor(220, 230, 245);
-      doc.setLineWidth(0.5);
-      doc.line(24, y + rowH, 24 + tableW, y + rowH);
+      doc.setDrawColor(210, 220, 240);
+      doc.setLineWidth(0.3);
+      doc.line(tableStartX, y + rowH, tableStartX + tableW, y + rowH);
 
       y += rowH;
     });
 
     drawFooter(doc, pageW, pageH, page);
-
     doc.save(`${title.replace(/\s+/g, '_')}_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
@@ -239,8 +435,6 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
               </Button>
             )}
           </div>
-
-          {/* Date range */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Date From</Label>
@@ -251,8 +445,6 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
               <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-8 text-sm" />
             </div>
           </div>
-
-          {/* Dynamic field filters */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {filterConfig.map(f => (
               <div key={f.key} className="space-y-1">
@@ -338,16 +530,39 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
   );
 }
 
-function drawFooter(doc, pageW, pageH, page) {
+// ── PDF helpers ──────────────────────────────────────────────────────────────
+
+function drawHeader(doc, pageW, logoDataUrl, logoW, logoH, titleText) {
   doc.setFillColor(26, 54, 93);
-  doc.rect(0, pageH - 28, pageW, 28, 'F');
+  doc.rect(0, 0, pageW, 72, 'F');
   doc.setFillColor(234, 88, 12);
-  doc.rect(0, pageH - 30, pageW, 2, 'F');
+  doc.rect(0, 68, pageW, 5, 'F');
+
+  if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 22, 17, logoW, logoH);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(255, 255, 255);
+  doc.text(titleText, pageW / 2, 32, { align: 'center' });
+}
+
+function drawSubtitle(doc, pageW, text) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(180, 205, 230);
-  doc.text('AJC International · FSQA Hub · Confidential', 24, pageH - 10);
-  doc.text(`Page ${page}`, pageW - 24, pageH - 10, { align: 'right' });
+  doc.text(text, pageW / 2, 52, { align: 'center' });
+}
+
+function drawFooter(doc, pageW, pageH, page) {
+  doc.setFillColor(26, 54, 93);
+  doc.rect(0, pageH - 26, pageW, 26, 'F');
+  doc.setFillColor(234, 88, 12);
+  doc.rect(0, pageH - 28, pageW, 2, 'F');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(180, 205, 230);
+  doc.text('AJC International · FSQA Hub · Confidential', 24, pageH - 9);
+  doc.text(`Page ${page}`, pageW - 24, pageH - 9, { align: 'right' });
 }
 
 function formatCell(value, type) {

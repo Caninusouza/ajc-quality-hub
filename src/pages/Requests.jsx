@@ -4,12 +4,25 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PageHeader from '@/components/shared/PageHeader';
 import RequestManageDialog from '@/components/requests/RequestManageDialog';
+import ReportDialog from '@/components/reports/ReportDialog';
 import { format } from 'date-fns';
-import { Search, Clock, Paperclip, ExternalLink } from 'lucide-react';
+import { Search, Clock, Paperclip, ExternalLink, BarChart2 } from 'lucide-react';
+
+const REQUEST_REPORT_FIELDS = [
+  { key: 'title', label: 'Title', type: 'text' },
+  { key: 'request_type', label: 'Type', type: 'select' },
+  { key: 'status', label: 'Status', type: 'select' },
+  { key: 'priority', label: 'Priority', type: 'select' },
+  { key: 'requested_by_name', label: 'Requested By', type: 'text' },
+  { key: 'fsqa_assignee', label: 'FSQA Assignee', type: 'select' },
+  { key: 'created_date', label: 'Submitted', type: 'date' },
+  { key: 'due_date', label: 'Due Date', type: 'date' },
+  { key: 'updated_date', label: 'Last Updated', type: 'date' },
+];
 
 const STATUS_CONFIG = {
   submitted:     { label: 'Submitted',    color: 'bg-blue-50 text-blue-700 border-blue-200' },
@@ -31,6 +44,7 @@ export default function Requests() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: requests = [], isLoading } = useQuery({
@@ -59,6 +73,9 @@ export default function Requests() {
         title="FSQA Requests"
         subtitle="Manage incoming requests from AJC staff"
       >
+        <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => setReportOpen(true)}>
+          <BarChart2 className="w-3.5 h-3.5" /> Generate Report
+        </Button>
         <Button
           variant="outline"
           size="sm"
@@ -165,6 +182,21 @@ export default function Requests() {
           onSave={(id, data) => updateMutation.mutateAsync({ id, data })}
         />
       )}
+
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        title="Requests"
+        data={requests}
+        filterConfig={REQUEST_REPORT_FIELDS}
+        dateField="created_date"
+        resolutionConfig={{
+          resolvedStatus: ['completed'],
+          statusKey: 'status',
+          createdField: 'created_date',
+          resolvedField: 'updated_date',
+        }}
+      />
     </div>
   );
 }
