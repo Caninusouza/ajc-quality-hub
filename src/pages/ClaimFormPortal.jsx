@@ -29,58 +29,17 @@ const EMPTY_FORM = {
   file_attachments: [],
 };
 
-// ── Invite-code gate ────────────────────────────────────────────────────────────
+// ── Simple sign-in gate (any email) ─────────────────────────────────────────────
 function InviteGate({ onSuccess }) {
-  const [step, setStep] = useState('signup'); // 'signup' | 'code'
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [notified, setNotified] = useState(false);
 
-  const handleSignupRequest = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!email.trim() || !name.trim()) return;
-    setLoading(true);
-    setError('');
-    try {
-      // Notify FSQA team about the signup request
-      await base44.integrations.Core.SendEmail({
-        to: 'fsqa@ajcfood.com',
-        subject: 'New Customer Claim Portal Sign-up Request',
-        body: `A customer has requested access to the AJC Quality Claim Portal.\n\nName: ${name}\nEmail: ${email}\n\nPlease generate a unique invite code and send it to the customer at the above email address so they can complete registration.\n\nThey are waiting at: ${window.location.origin}/claim-form`,
-      });
-      setNotified(true);
-      setStep('code');
-    } catch {
-      setError('Failed to send request. Please try again.');
-    }
-    setLoading(false);
-  };
-
-  const handleCodeSubmit = async (e) => {
-    e.preventDefault();
-    if (!code.trim()) return;
-    setLoading(true);
-    setError('');
-    try {
-      // Validate the code against InviteCode entity
-      const codes = await base44.entities.InviteCode.filter({ code: code.trim(), is_used: false });
-      if (!codes || codes.length === 0) {
-        setError('Invalid or already-used invite code. Please contact FSQA.');
-        setLoading(false);
-        return;
-      }
-      // Mark code as used
-      await base44.entities.InviteCode.update(codes[0].id, { is_used: true, used_by_email: email });
-      // Store session in localStorage
-      localStorage.setItem('claimPortalUser', JSON.stringify({ email, name }));
-      onSuccess({ email, name });
-    } catch {
-      setError('An error occurred. Please try again.');
-    }
-    setLoading(false);
+    const user = { email: email.trim(), name: name.trim() };
+    localStorage.setItem('claimPortalUser', JSON.stringify(user));
+    onSuccess(user);
   };
 
   return (
@@ -95,60 +54,23 @@ function InviteGate({ onSuccess }) {
         </div>
 
         <div className="bg-card border rounded-xl shadow p-6">
-          {step === 'signup' ? (
-            <>
-              <h2 className="font-semibold mb-1">Request Portal Access</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Enter your details to request an invite code. Our FSQA team will email you a code to complete sign-in.
-              </p>
-              <form onSubmit={handleSignupRequest} className="space-y-4">
-                <div>
-                  <Label>Full Name *</Label>
-                  <Input value={name} onChange={e => setName(e.target.value)} placeholder="Your full name" className="mt-1" required />
-                </div>
-                <div>
-                  <Label>Email Address *</Label>
-                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" className="mt-1" required />
-                </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Sending request...</> : 'Request Access'}
-                </Button>
-                <p className="text-xs text-center text-muted-foreground">Already have a code?{' '}
-                  <button type="button" className="text-primary underline" onClick={() => setStep('code')}>Enter it here</button>
-                </p>
-              </form>
-            </>
-          ) : (
-            <>
-              <h2 className="font-semibold mb-1">Enter Your Invite Code</h2>
-              {notified && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4 text-sm text-emerald-700">
-                  ✓ Your request has been sent. Our FSQA team will email you a code shortly.
-                </div>
-              )}
-              <p className="text-sm text-muted-foreground mb-4">
-                Enter the invite code sent to you by the AJC FSQA team.
-              </p>
-              <form onSubmit={handleCodeSubmit} className="space-y-4">
-                <div>
-                  <Label>Email Address *</Label>
-                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" className="mt-1" required />
-                </div>
-                <div>
-                  <Label>Invite Code *</Label>
-                  <Input value={code} onChange={e => setCode(e.target.value)} placeholder="e.g. AJC-XXXXX" className="mt-1 font-mono tracking-widest uppercase" required />
-                </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Verifying...</> : 'Access Portal'}
-                </Button>
-                <p className="text-xs text-center text-muted-foreground">
-                  <button type="button" className="text-primary underline" onClick={() => { setStep('signup'); setNotified(false); }}>← Back</button>
-                </p>
-              </form>
-            </>
-          )}
+          <h2 className="font-semibold mb-1">Access the Claim Portal</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Enter your name and business email to begin a quality claim submission.
+          </p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label>Full Name *</Label>
+              <Input value={name} onChange={e => setName(e.target.value)} placeholder="Your full name" className="mt-1" required />
+            </div>
+            <div>
+              <Label>Business Email Address *</Label>
+              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" className="mt-1" required />
+            </div>
+            <Button type="submit" className="w-full">
+              Continue to Claim Form
+            </Button>
+          </form>
         </div>
       </div>
     </div>
