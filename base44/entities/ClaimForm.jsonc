@@ -17,6 +17,10 @@
       ],
       "default": "submitted"
     },
+    "complaint_type": {
+      "type": "string",
+      "description": "Claim, Complaint, Inquiry, or Other"
+    },
     "customer_company": {
       "type": "string"
     },
@@ -30,6 +34,9 @@
       "type": "string"
     },
     "so_number": {
+      "type": "string"
+    },
+    "ajc_sales_person": {
       "type": "string"
     },
     "supplier_name": {
@@ -48,34 +55,24 @@
       "type": "string",
       "format": "date"
     },
+    "receiving_date": {
+      "type": "string",
+      "format": "date"
+    },
     "quantity_affected": {
       "type": "string"
     },
+    "quantity_remaining": {
+      "type": "string"
+    },
     "claim_type": {
-      "type": "string",
-      "enum": [
-        "Quality Defect",
-        "Foreign Material",
-        "Labeling Issue",
-        "Short Weight / Count",
-        "Temperature Abuse",
-        "Packaging Damage",
-        "Other"
-      ]
+      "type": "string"
     },
     "supporting_evidence": {
-      "type": "string",
-      "description": "Description of evidence provided"
+      "type": "string"
     },
     "requested_resolution": {
-      "type": "string",
-      "enum": [
-        "Credit / Refund",
-        "Replacement Product",
-        "Return Authorization",
-        "Investigation Only",
-        "Other"
-      ]
+      "type": "string"
     },
     "additional_comments": {
       "type": "string"

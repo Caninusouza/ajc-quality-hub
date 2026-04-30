@@ -7,24 +7,43 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Upload, X, Paperclip, ShieldAlert, CheckCircle2, LogOut } from 'lucide-react';
 
+const COMPLAINT_TYPES = ['Claim', 'Complaint', 'Inquiry', 'Other'];
 const CLAIM_TYPES = ['Quality Defect', 'Foreign Material', 'Labeling Issue', 'Short Weight / Count', 'Temperature Abuse', 'Packaging Damage', 'Other'];
 const RESOLUTIONS = ['Credit / Refund', 'Replacement Product', 'Return Authorization', 'Investigation Only', 'Other'];
 
+const AJC_SALES_PEOPLE = [
+  'Augusto Hernandez',
+  'Carlos Meza',
+  'David Noriega',
+  'Diana Ruiz',
+  'Eduardo Vargas',
+  'Jose Perez',
+  'Other',
+];
+
 const EMPTY_FORM = {
+  complaint_type: '',
+  complaint_type_other: '',
   customer_company: '',
   customer_address: '',
   contact_person: '',
   contact_email: '',
   so_number: '',
+  ajc_sales_person: '',
+  ajc_sales_person_other: '',
   supplier_name: '',
   product_name: '',
   issue_description: '',
   lot_batch_number: '',
   purchase_date: '',
+  receiving_date: '',
   quantity_affected: '',
+  quantity_remaining: '',
   claim_type: '',
+  claim_type_other: '',
   supporting_evidence: '',
   requested_resolution: '',
+  requested_resolution_other: '',
   additional_comments: '',
   file_attachments: [],
 };
@@ -115,10 +134,21 @@ export default function ClaimFormPortal() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+
+    // Resolve "Other" free-text values
+    const resolvedClaimType = form.claim_type === 'Other' ? form.claim_type_other : form.claim_type;
+    const resolvedResolution = form.requested_resolution === 'Other' ? form.requested_resolution_other : form.requested_resolution;
+    const resolvedComplaintType = form.complaint_type === 'Other' ? form.complaint_type_other : form.complaint_type;
+    const resolvedSalesPerson = form.ajc_sales_person === 'Other' ? form.ajc_sales_person_other : form.ajc_sales_person;
+
     const payload = {
       ...form,
       contact_email: form.contact_email || portalUser?.email,
       contact_person: form.contact_person || portalUser?.name,
+      claim_type: resolvedClaimType,
+      requested_resolution: resolvedResolution,
+      complaint_type: resolvedComplaintType,
+      ajc_sales_person: resolvedSalesPerson,
       status: 'submitted',
     };
     await base44.entities.ClaimForm.create(payload);
@@ -130,7 +160,7 @@ export default function ClaimFormPortal() {
       to: customerEmail,
       from_name: 'AJC International FSQA',
       subject: 'Your Quality Claim Has Been Received – AJC International',
-      body: `Dear ${payload.contact_person},\n\nThank you for submitting your Product Quality Claim with AJC International. We have received your submission and it is currently under review by our Food Safety & Quality Assurance team.\n\nClaim Summary:\n• Product: ${payload.product_name}\n• Company: ${payload.customer_company}\n• Issue: ${payload.claim_type || 'See description'}\n• SO Number: ${payload.so_number || 'N/A'}${attachmentList ? `\n• Attachments:\n${attachmentList}` : ''}\n\nYou will receive a follow-up from our FSQA team within 3–5 business days.\n\nFor any questions, please contact us at fsqa@ajcfood.com.\n\nBest regards,\nAJC International – Food Safety & Quality Assurance Team`,
+      body: `Dear ${payload.contact_person},\n\nThank you for submitting your Product Quality Claim with AJC International. We have received your submission and it is currently under review by our Food Safety & Quality Assurance team.\n\nClaim Summary:\n• Type: ${resolvedComplaintType || 'N/A'}\n• Product: ${payload.product_name}\n• Company: ${payload.customer_company}\n• Issue: ${resolvedClaimType || 'See description'}\n• SO Number: ${payload.so_number || 'N/A'}${attachmentList ? `\n• Attachments:\n${attachmentList}` : ''}\n\nYou will receive a follow-up from our FSQA team within 3–5 business days.\n\nFor any questions, please contact us at fsqa@ajcfood.com.\n\nBest regards,\nAJC International – Food Safety & Quality Assurance Team`,
     });
 
     setSubmitting(false);
@@ -181,10 +211,27 @@ export default function ClaimFormPortal() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6">
           <h2 className="text-xl font-bold">Food Product Quality Claim Form</h2>
-          <p className="text-sm text-muted-foreground mt-1">Please complete all required fields (*) to submit your claim.</p>
+          <p className="text-sm text-muted-foreground mt-1">All fields marked with * are required before submission.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+
+          {/* Complaint / Claim Type */}
+          <section className="bg-card border rounded-xl p-5">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-4">Complaint Classification</h3>
+            <div className="space-y-4">
+              <div>
+                <Label>Complaint Type *</Label>
+                <Select value={form.complaint_type} onValueChange={v => set('complaint_type', v)}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select complaint type" /></SelectTrigger>
+                  <SelectContent>{COMPLAINT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+                {form.complaint_type === 'Other' && (
+                  <Input value={form.complaint_type_other} onChange={e => set('complaint_type_other', e.target.value)} placeholder="Please specify..." className="mt-2" required />
+                )}
+              </div>
+            </div>
+          </section>
 
           {/* Customer Information */}
           <section className="bg-card border rounded-xl p-5">
@@ -201,8 +248,8 @@ export default function ClaimFormPortal() {
                 </div>
               </div>
               <div>
-                <Label>Customer Address</Label>
-                <Textarea value={form.customer_address} onChange={e => set('customer_address', e.target.value)} className="mt-1 h-16 resize-none" />
+                <Label>Customer Address *</Label>
+                <Textarea value={form.customer_address} onChange={e => set('customer_address', e.target.value)} className="mt-1 h-16 resize-none" required />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -210,9 +257,19 @@ export default function ClaimFormPortal() {
                   <Input type="email" value={form.contact_email} onChange={e => set('contact_email', e.target.value)} placeholder={portalUser.email} className="mt-1" required />
                 </div>
                 <div>
-                  <Label>Sales Order (SO) Number</Label>
-                  <Input value={form.so_number} onChange={e => set('so_number', e.target.value)} className="mt-1" />
+                  <Label>Sales Order (SO) Number *</Label>
+                  <Input value={form.so_number} onChange={e => set('so_number', e.target.value)} className="mt-1" required />
                 </div>
+              </div>
+              <div>
+                <Label>AJC Sales Person *</Label>
+                <Select value={form.ajc_sales_person} onValueChange={v => set('ajc_sales_person', v)}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select AJC sales person" /></SelectTrigger>
+                  <SelectContent>{AJC_SALES_PEOPLE.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+                {form.ajc_sales_person === 'Other' && (
+                  <Input value={form.ajc_sales_person_other} onChange={e => set('ajc_sales_person_other', e.target.value)} placeholder="Enter sales person name..." className="mt-2" required />
+                )}
               </div>
             </div>
           </section>
@@ -221,8 +278,8 @@ export default function ClaimFormPortal() {
           <section className="bg-card border rounded-xl p-5">
             <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-4">Supplier Information</h3>
             <div>
-              <Label>Supplier Name</Label>
-              <Input value={form.supplier_name} onChange={e => set('supplier_name', e.target.value)} className="mt-1" />
+              <Label>Supplier Name *</Label>
+              <Input value={form.supplier_name} onChange={e => set('supplier_name', e.target.value)} className="mt-1" required />
             </div>
           </section>
 
@@ -234,18 +291,28 @@ export default function ClaimFormPortal() {
                 <Label>Product Name (as stated on label) *</Label>
                 <Input value={form.product_name} onChange={e => set('product_name', e.target.value)} className="mt-1" required />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <Label>Lot / Batch Number *</Label>
+                <Input value={form.lot_batch_number} onChange={e => set('lot_batch_number', e.target.value)} className="mt-1" required />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>Lot / Batch Number</Label>
-                  <Input value={form.lot_batch_number} onChange={e => set('lot_batch_number', e.target.value)} className="mt-1" />
+                  <Label>Purchase Date *</Label>
+                  <Input type="date" value={form.purchase_date} onChange={e => set('purchase_date', e.target.value)} className="mt-1" required />
                 </div>
                 <div>
-                  <Label>Purchase Date</Label>
-                  <Input type="date" value={form.purchase_date} onChange={e => set('purchase_date', e.target.value)} className="mt-1" />
+                  <Label>Receiving Date *</Label>
+                  <Input type="date" value={form.receiving_date} onChange={e => set('receiving_date', e.target.value)} className="mt-1" required />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Quantity Affected *</Label>
+                  <Input value={form.quantity_affected} onChange={e => set('quantity_affected', e.target.value)} placeholder="e.g. 10 cases" className="mt-1" required />
                 </div>
                 <div>
-                  <Label>Quantity Affected</Label>
-                  <Input value={form.quantity_affected} onChange={e => set('quantity_affected', e.target.value)} placeholder="e.g. 10 cases" className="mt-1" />
+                  <Label>Quantity Remaining *</Label>
+                  <Input value={form.quantity_remaining} onChange={e => set('quantity_remaining', e.target.value)} placeholder="e.g. 5 cases" className="mt-1" required />
                 </div>
               </div>
             </div>
@@ -261,23 +328,29 @@ export default function ClaimFormPortal() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>Claim Type</Label>
+                  <Label>Claim Type *</Label>
                   <Select value={form.claim_type} onValueChange={v => set('claim_type', v)}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
                     <SelectContent>{CLAIM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                   </Select>
+                  {form.claim_type === 'Other' && (
+                    <Input value={form.claim_type_other} onChange={e => set('claim_type_other', e.target.value)} placeholder="Please specify..." className="mt-2" required />
+                  )}
                 </div>
                 <div>
-                  <Label>Requested Resolution</Label>
+                  <Label>Requested Resolution *</Label>
                   <Select value={form.requested_resolution} onValueChange={v => set('requested_resolution', v)}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Select resolution" /></SelectTrigger>
                     <SelectContent>{RESOLUTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
                   </Select>
+                  {form.requested_resolution === 'Other' && (
+                    <Input value={form.requested_resolution_other} onChange={e => set('requested_resolution_other', e.target.value)} placeholder="Please specify..." className="mt-2" required />
+                  )}
                 </div>
               </div>
               <div>
-                <Label>Supporting Evidence / Documentation Available</Label>
-                <Textarea value={form.supporting_evidence} onChange={e => set('supporting_evidence', e.target.value)} placeholder="Describe any photos, lab results, or other documentation you are attaching..." className="mt-1 h-16 resize-none" />
+                <Label>Supporting Evidence / Documentation Available *</Label>
+                <Textarea value={form.supporting_evidence} onChange={e => set('supporting_evidence', e.target.value)} placeholder="Describe any photos, lab results, or other documentation you are attaching..." className="mt-1 h-16 resize-none" required />
               </div>
               <div>
                 <Label>Additional Comments</Label>
