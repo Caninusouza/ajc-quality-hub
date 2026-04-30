@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SearchableCountrySelect from '@/components/shared/SearchableCountrySelect';
 import { Badge } from '@/components/ui/badge';
-import { Download, Filter, X, FileText } from 'lucide-react';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { Download, Filter, X, FileText, FileDown } from 'lucide-react';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { jsPDF } from 'jspdf';
 
 export default function ReportDialog({ open, onOpenChange, title, data, filterConfig, dateField = 'created_date' }) {
   const [dateFrom, setDateFrom] = useState('');
@@ -69,6 +70,145 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
     a.download = `${title.replace(/\s+/g, '_')}_report_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = async () => {
+    if (!filtered.length) return;
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+
+    // ── HEADER BACKGROUND ──────────────────────────────────────────────
+    // Navy gradient bar
+    doc.setFillColor(26, 54, 93); // deep navy
+    doc.rect(0, 0, pageW, 70, 'F');
+
+    // Orange accent stripe
+    doc.setFillColor(234, 88, 12); // accent orange
+    doc.rect(0, 66, pageW, 6, 'F');
+
+    // Load AJC logo via canvas
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = 'https://media.base44.com/images/public/69f10cbc7366891a2d7229d7/cb8fdd247_AJC.png';
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const dataUrl = canvas.toDataURL('image/png');
+      // Draw logo (height 40pt, keep aspect ratio)
+      const logoH = 40;
+      const logoW = (img.width / img.height) * logoH;
+      doc.addImage(dataUrl, 'PNG', 24, 15, logoW, logoH);
+    } catch (_) { /* logo failed, skip */ }
+
+    // Report title & subtitle
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`${title} Report`, pageW / 2, 30, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(180, 205, 230);
+    const dateRange = (dateFrom || dateTo)
+      ? `${dateFrom ? format(parseISO(dateFrom), 'MMM d, yyyy') : 'Beginning'} – ${dateTo ? format(parseISO(dateTo), 'MMM d, yyyy') : 'Today'}`
+      : 'All dates';
+    doc.text(`Generated: ${format(new Date(), 'MMMM d, yyyy')}   |   Date range: ${dateRange}   |   Records: ${filtered.length}`, pageW / 2, 50, { align: 'center' });
+
+    // ── TABLE ──────────────────────────────────────────────────────────
+    const cols = filterConfig;
+    const startY = 90;
+    const rowH = 22;
+    const colPad = 8;
+    const tableW = pageW - 48;
+    const colW = tableW / cols.length;
+
+    // Column header background
+    doc.setFillColor(26, 54, 93);
+    doc.rect(24, startY, tableW, rowH, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(255, 255, 255);
+    cols.forEach((col, i) => {
+      const x = 24 + i * colW + colPad;
+      doc.text(col.label.toUpperCase(), x, startY + 14, { maxWidth: colW - colPad * 2 });
+    });
+
+    // Rows
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    let y = startY + rowH;
+    let page = 1;
+
+    filtered.forEach((item, rowIdx) => {
+      if (y + rowH > pageH - 40) {
+        // Footer on current page
+        drawFooter(doc, pageW, pageH, page);
+        doc.addPage();
+        page++;
+        y = 30;
+
+        // Re-draw column headers
+        doc.setFillColor(26, 54, 93);
+        doc.rect(24, y, tableW, rowH, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(255, 255, 255);
+        cols.forEach((col, i) => {
+          doc.text(col.label.toUpperCase(), 24 + i * colW + colPad, y + 14, { maxWidth: colW - colPad * 2 });
+        });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        y += rowH;
+      }
+
+      // Alternating row background
+      if (rowIdx % 2 === 0) {
+        doc.setFillColor(240, 245, 255);
+      } else {
+        doc.setFillColor(255, 255, 255);
+      }
+      doc.rect(24, y, tableW, rowH, 'F');
+
+      // Left accent bar for even rows
+      if (rowIdx % 2 === 0) {
+        doc.setFillColor(234, 88, 12);
+        doc.rect(24, y, 3, rowH, 'F');
+      }
+
+      doc.setTextColor(30, 41, 59);
+      cols.forEach((col, i) => {
+        const raw = item[col.key];
+        let cellText = '';
+        if (raw == null || raw === '') cellText = '—';
+        else if (col.type === 'date') {
+          try { cellText = format(parseISO(String(raw)), 'MMM d, yyyy'); } catch { cellText = String(raw); }
+        } else if (typeof raw === 'number') cellText = raw.toLocaleString();
+        else cellText = String(raw);
+
+        doc.text(cellText, 24 + i * colW + colPad + (rowIdx % 2 === 0 ? 3 : 0), y + 14, { maxWidth: colW - colPad * 2 });
+      });
+
+      // Bottom border
+      doc.setDrawColor(220, 230, 245);
+      doc.setLineWidth(0.5);
+      doc.line(24, y + rowH, 24 + tableW, y + rowH);
+
+      y += rowH;
+    });
+
+    drawFooter(doc, pageW, pageH, page);
+
+    doc.save(`${title.replace(/\s+/g, '_')}_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
   const clearFilters = () => {
@@ -154,9 +294,14 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
             <Badge variant="outline" className="text-xs">{filtered.length} record{filtered.length !== 1 ? 's' : ''}</Badge>
             {hasFilters && <span className="text-xs text-muted-foreground">filtered from {data.length} total</span>}
           </div>
-          <Button size="sm" className="gap-2 h-8" onClick={exportCSV} disabled={!filtered.length}>
-            <Download className="w-3.5 h-3.5" /> Export CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="gap-2 h-8" onClick={exportCSV} disabled={!filtered.length}>
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </Button>
+            <Button size="sm" className="gap-2 h-8 bg-accent hover:bg-accent/90 text-accent-foreground" onClick={exportPDF} disabled={!filtered.length}>
+              <FileDown className="w-3.5 h-3.5" /> Export PDF
+            </Button>
+          </div>
         </div>
 
         {/* Table preview */}
@@ -191,6 +336,18 @@ export default function ReportDialog({ open, onOpenChange, title, data, filterCo
       </DialogContent>
     </Dialog>
   );
+}
+
+function drawFooter(doc, pageW, pageH, page) {
+  doc.setFillColor(26, 54, 93);
+  doc.rect(0, pageH - 28, pageW, 28, 'F');
+  doc.setFillColor(234, 88, 12);
+  doc.rect(0, pageH - 30, pageW, 2, 'F');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(180, 205, 230);
+  doc.text('AJC International · FSQA Hub · Confidential', 24, pageH - 10);
+  doc.text(`Page ${page}`, pageW - 24, pageH - 10, { align: 'right' });
 }
 
 function formatCell(value, type) {
