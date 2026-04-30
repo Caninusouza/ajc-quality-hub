@@ -19,12 +19,14 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
 
   const NavContent = () => (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border">
-        <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-          <ShieldAlert className="w-4 h-4 text-sidebar-primary-foreground" />
-        </div>
+      <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
+        <img
+          src="https://media.base44.com/images/public/69f10cbc7366891a2d7229d7/cb8fdd247_AJC.png"
+          alt="AJC Logo"
+          className={cn("object-contain shrink-0", collapsed ? "h-7 w-7" : "h-8")}
+        />
         {!collapsed && (
-          <span className="font-bold text-base text-sidebar-foreground tracking-tight">AJC FSQA Hub</span>
+          <span className="font-bold text-sm text-sidebar-foreground tracking-tight">FSQA Hub</span>
         )}
       </div>
 
