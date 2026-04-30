@@ -21,6 +21,9 @@ Deno.serve(async (req) => {
     const actorIsFsqa = actorEmail && Object.values(FSQA_PEOPLE).includes(actorEmail);
     const actorIsAssignee = actorEmail === assigneeEmail;
 
+    // Skip entirely if actor is assigning to themselves
+    if (actorIsAssignee && event.type === 'create') return Response.json({ skipped: 'actor assigned to themselves' });
+
     // Case: FSQA assignee is updating their own project
     if (event.type === 'update' && actorIsAssignee) {
       // If marked as completed, notify the other FSQA rep
