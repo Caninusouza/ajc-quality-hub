@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, X, Paperclip, ShieldAlert, CheckCircle2, LogOut } from 'lucide-react';
+import { Loader2, Upload, X, Paperclip, CheckCircle2, LogOut } from 'lucide-react';
 
 const COMPLAINT_TYPES = ['Claim', 'Complaint', 'Inquiry', 'Other'];
 const CLAIM_TYPES = ['Quality Defect', 'Foreign Material', 'Labeling Issue', 'Short Weight / Count', 'Temperature Abuse', 'Packaging Damage', 'Other'];
@@ -65,9 +65,7 @@ function InviteGate({ onSuccess }) {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3">
-            <ShieldAlert className="w-6 h-6 text-primary-foreground" />
-          </div>
+          <img src="https://media.base44.com/images/public/69f10cbc7366891a2d7229d7/cb8fdd247_AJC.png" alt="AJC Logo" className="h-16 object-contain mb-3" />
           <h1 className="text-2xl font-bold">AJC International</h1>
           <p className="text-sm text-muted-foreground mt-1">Product Quality Claim Portal</p>
         </div>
@@ -192,9 +190,7 @@ export default function ClaimFormPortal() {
       {/* Header */}
       <header className="border-b bg-card px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <ShieldAlert className="w-4 h-4 text-primary-foreground" />
-          </div>
+          <img src="https://media.base44.com/images/public/69f10cbc7366891a2d7229d7/cb8fdd247_AJC.png" alt="AJC Logo" className="h-8 object-contain" />
           <div>
             <h1 className="font-bold text-base">AJC International</h1>
             <p className="text-xs text-muted-foreground">Product Quality Claim Portal</p>
