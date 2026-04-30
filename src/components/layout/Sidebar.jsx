@@ -7,11 +7,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Claims', icon: ShieldAlert, path: '/claims' },
+  { label: 'Claim Forms', icon: FileWarning, path: '/claim-forms' },
   { label: 'Projects', icon: FolderKanban, path: '/projects' },
   { label: 'Tasks', icon: CheckSquare, path: '/tasks' },
   { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
   { label: 'Requests', icon: InboxIcon, path: '/requests' },
-  { label: 'Claim Forms', icon: FileWarning, path: '/claim-forms' },
 ];
 
 export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) {
