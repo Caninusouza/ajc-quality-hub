@@ -1,667 +1,598 @@
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileDown, Printer } from 'lucide-react';
-import { jsPDF } from 'jspdf';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
-const INSPECTION_AREAS = [
-  'Exterior / Grounds',
-  'Receiving Area',
-  'Storage / Warehouse',
-  'Processing / Production Floor',
-  'Sanitation Practices',
-  'Employee Hygiene & GMP',
-  'Pest Control Evidence',
-  'Temperature Control',
-  'Labeling & Traceability',
-];
-
+// ─── Constants ────────────────────────────────────────────────────────────────
 const PRODUCT_TYPES = ['Chicken', 'Pork', 'Beef', 'Fish', 'Turkey', 'Vegetables', 'Fruits', 'French Fries', 'Other'];
 const AUDIT_TYPES = ['SQF', 'BRC', 'FSSC 22000', 'IFS', 'GLOBALG.A.P.', 'Primus GFS', 'Costco', 'Other'];
+const INSPECTION_AREAS = [
+  ['inspection_exterior', 'Exterior / Grounds'],
+  ['inspection_receiving', 'Receiving Area'],
+  ['inspection_storage', 'Storage / Warehouse'],
+  ['inspection_processing', 'Processing / Production Floor'],
+  ['inspection_sanitation', 'Sanitation Practices'],
+  ['inspection_employee_hygiene', 'Employee Hygiene & GMP'],
+  ['inspection_pest_control', 'Pest Control Evidence'],
+  ['inspection_temperature_control', 'Temperature Control'],
+  ['inspection_labeling', 'Labeling & Traceability'],
+];
 
-// ─── jsPDF helpers ───────────────────────────────────────────────────────────
-function addSectionHeader(doc, text, y, pageWidth) {
-  doc.setFillColor(26, 54, 93);
-  doc.rect(14, y - 5, pageWidth - 28, 8, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text(text, 18, y);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'normal');
-  return y + 8;
-}
+const NAVY = rgb(0.102, 0.212, 0.365);
+const LIGHT_BLUE = rgb(0.902, 0.925, 0.957);
+const LIGHT_GRAY = rgb(0.96, 0.97, 0.98);
+const MID_GRAY = rgb(0.7, 0.7, 0.7);
+const WHITE = rgb(1, 1, 1);
+const BLACK = rgb(0, 0, 0);
+const DARK_GRAY = rgb(0.3, 0.3, 0.3);
 
-function addTextField(doc, label, x, y, w, value = '') {
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.text(label, x, y - 1);
-  doc.setFont('helvetica', 'normal');
-  // Draw border
-  doc.setDrawColor(180, 180, 180);
-  doc.rect(x, y + 1, w, 8);
-  if (value) {
-    doc.setFontSize(7);
-    doc.text(String(value).substring(0, Math.floor(w / 1.8)), x + 1, y + 6.5);
+const PW = 595; // A4 width in points
+const PH = 842; // A4 height in points
+const ML = 36;
+const CW = PW - ML * 2; // 523
+
+let _fieldId = 0;
+const uid = (prefix) => `${prefix}_${++_fieldId}`;
+
+// ─── Page factory ─────────────────────────────────────────────────────────────
+function makePage(pdfDoc, fontBold, fontNormal, logoImage) {
+  const page = pdfDoc.addPage([PW, PH]);
+
+  // Navy header bar
+  page.drawRectangle({ x: 0, y: PH - 52, width: PW, height: 52, color: NAVY });
+
+  // Logo
+  if (logoImage) {
+    const dims = logoImage.scaleToFit(72, 34);
+    page.drawImage(logoImage, {
+      x: PW - ML - dims.width,
+      y: PH - 48 + (34 - dims.height) / 2,
+      width: dims.width,
+      height: dims.height,
+    });
   }
-  return y + 12;
+
+  page.drawText('AJC FSQA HUB', { x: ML, y: PH - 22, font: fontBold, size: 13, color: WHITE });
+  page.drawText('Supplier Intake & Assessment Form', { x: ML, y: PH - 36, font: fontNormal, size: 9, color: rgb(0.8, 0.87, 0.95) });
+  page.drawText(`Date: ${new Date().toLocaleDateString()}`, { x: ML, y: PH - 47, font: fontNormal, size: 7, color: rgb(0.65, 0.75, 0.88) });
+
+  // Footer
+  page.drawLine({ start: { x: ML, y: 30 }, end: { x: PW - ML, y: 30 }, thickness: 0.4, color: MID_GRAY });
+  page.drawText('AJC FSQA Hub — Supplier Intake & Assessment Form  |  CONFIDENTIAL', { x: ML, y: 20, font: fontNormal, size: 6.5, color: MID_GRAY });
+
+  return page;
 }
 
-function checkBox(doc, x, y, checked = false) {
-  doc.setDrawColor(100, 100, 100);
-  doc.rect(x, y, 3.5, 3.5);
-  if (checked) {
-    doc.setDrawColor(26, 54, 93);
-    doc.setLineWidth(0.6);
-    doc.line(x + 0.5, y + 2, x + 1.5, y + 3.2);
-    doc.line(x + 1.5, y + 3.2, x + 3.2, y + 0.5);
-    doc.setLineWidth(0.2);
-    doc.setDrawColor(100, 100, 100);
-  }
+function secHeader(page, text, y, fontBold) {
+  page.drawRectangle({ x: ML, y: y - 4, width: CW, height: 15, color: NAVY });
+  page.drawText(text, { x: ML + 7, y: y + 4, font: fontBold, size: 9, color: WHITE });
+  return y - 22;
 }
 
-function addCheckList(doc, label, options, selectedArr, x, y, cols = 4) {
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.text(label, x, y);
-  y += 4;
-  const colW = 42;
-  options.forEach((opt, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    const cx = x + col * colW;
-    const cy = y + row * 6;
-    checkBox(doc, cx, cy - 3, Array.isArray(selectedArr) && selectedArr.includes(opt));
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.text(opt, cx + 5, cy);
+// ─── Interactive field helpers ────────────────────────────────────────────────
+
+function addText(pdfDoc, page, x, y, w, h, value, name, multiline = false) {
+  const form = pdfDoc.getForm();
+  const field = form.createTextField(name || uid('tf'));
+  field.setText(value != null && value !== '' ? String(value) : '');
+  if (multiline) field.enableMultiline();
+  field.addToPage(page, {
+    x, y,
+    width: w,
+    height: h,
+    textColor: BLACK,
+    backgroundColor: rgb(0.98, 0.99, 1),
+    borderColor: MID_GRAY,
+    borderWidth: 0.8,
   });
-  const rows = Math.ceil(options.length / cols);
-  return y + rows * 6 + 2;
+  return field;
 }
 
-function addYesNoField(doc, label, value, x, y) {
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.text(label + ':', x, y);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  const opts = label.includes('Slaughter') ? ['Yes', 'No', 'N/A'] : ['Yes', 'No'];
-  let cx = x + doc.getTextWidth(label + ': ') + 2;
-  opts.forEach(opt => {
-    checkBox(doc, cx, y - 3.5, value === opt);
-    doc.text(opt, cx + 5, y);
-    cx += 18;
+function addCB(pdfDoc, page, x, y, size, checked, name) {
+  const form = pdfDoc.getForm();
+  const cb = form.createCheckBox(name || uid('cb'));
+  cb.addToPage(page, {
+    x, y,
+    width: size,
+    height: size,
+    backgroundColor: WHITE,
+    borderColor: DARK_GRAY,
+    borderWidth: 1,
   });
-  return y + 6;
+  if (checked) cb.check();
+  return cb;
 }
 
-function addRatingRow(doc, label, value, comment, x, y, pageWidth) {
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(label, x, y);
-  const opts = ['Satisfactory', 'Needs Improvement', 'Unsatisfactory', 'N/A'];
-  let cx = x + 52;
-  opts.forEach(opt => {
-    checkBox(doc, cx, y - 3.5, value === opt);
-    doc.setFontSize(6.5);
-    doc.text(opt, cx + 4.5, y);
-    cx += 32;
+// Draw label text, then a writable text field below it. Returns new y (lower).
+function fieldBlock(pdfDoc, page, label, x, y, w, h, value, fontBold, name, multiline) {
+  page.drawText(label, { x, y, font: fontBold, size: 7.5, color: BLACK });
+  addText(pdfDoc, page, x, y - h - 3, w, h, value, name || uid('tf'), multiline);
+  return y - h - 10;
+}
+
+// Draw label + checkboxes inline. Returns x after last cb.
+function cbGroup(pdfDoc, page, label, opts, values, x, y, cbSz, font, checked_value, name_prefix) {
+  if (label) {
+    page.drawText(label, { x, y, font, size: 8, color: BLACK });
+    x += font.widthOfTextAtSize(label, 8) + 5;
+  }
+  for (const opt of opts) {
+    const isChecked = Array.isArray(checked_value)
+      ? checked_value.includes(opt)
+      : checked_value === opt;
+    addCB(pdfDoc, page, x, y - cbSz + 1, cbSz, isChecked, `${name_prefix}_${opt.replace(/[\s/.]/g, '_')}`);
+    page.drawText(opt, { x: x + cbSz + 2, y, font, size: 8, color: BLACK });
+    x += cbSz + font.widthOfTextAtSize(opt, 8) + 10;
+  }
+  return x;
+}
+
+// ─── PDF generator ────────────────────────────────────────────────────────────
+export async function generateSupplierIntakePDF(intake = {}) {
+  _fieldId = 0;
+
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.getForm(); // initialize AcroForm
+
+  const fontNormal = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  // Try to load AJC logo
+  let logoImage = null;
+  try {
+    const res = await fetch('https://www.ajcfood.com/themes/custom/ajc/img/logo-ajc.png');
+    if (res.ok) {
+      const buf = await res.arrayBuffer();
+      logoImage = await pdfDoc.embedPng(new Uint8Array(buf));
+    }
+  } catch { /* skip */ }
+
+  // ── PAGE 1 ──────────────────────────────────────────────────────────────────
+  let page = makePage(pdfDoc, fontBold, fontNormal, logoImage);
+  let y = PH - 64;
+  const cbSz = 10;
+  const half = (CW - 10) / 2;
+  const third = (CW - 16) / 3;
+
+  // ── SECTION 1: Supplier Information ─────────────────────────────────────────
+  y = secHeader(page, '1.  SUPPLIER INFORMATION', y, fontBold);
+
+  // Row 1
+  fieldBlock(pdfDoc, page, 'Supplier Name *', ML, y, half, 14, intake.supplier_name, fontBold, 'supplier_name');
+  fieldBlock(pdfDoc, page, 'Visit Date *', ML + half + 10, y, half, 14, intake.visit_date, fontBold, 'visit_date');
+  y -= 26;
+
+  // Row 2
+  fieldBlock(pdfDoc, page, 'Visited By', ML, y, half, 14, intake.visited_by, fontBold, 'visited_by');
+  fieldBlock(pdfDoc, page, 'Supplier Address', ML + half + 10, y, half, 14, intake.supplier_address, fontBold, 'supplier_address');
+  y -= 26;
+
+  // Row 3
+  fieldBlock(pdfDoc, page, 'Contact Person', ML, y, third, 14, intake.supplier_contact_name, fontBold, 'contact_name');
+  fieldBlock(pdfDoc, page, 'Contact Email', ML + third + 8, y, third, 14, intake.supplier_contact_email, fontBold, 'contact_email');
+  fieldBlock(pdfDoc, page, 'Contact Phone', ML + 2 * (third + 8), y, third, 14, intake.supplier_contact_phone, fontBold, 'contact_phone');
+  y -= 28;
+
+  // ── SECTION 2: Products & Operations ────────────────────────────────────────
+  if (y < 180) { page = makePage(pdfDoc, fontBold, fontNormal, logoImage); y = PH - 64; }
+  y = secHeader(page, '2.  PRODUCTS & OPERATIONS', y, fontBold);
+
+  page.drawText('Product Types:', { x: ML, y, font: fontBold, size: 8, color: BLACK });
+  y -= 14;
+
+  // 5-column checkbox grid
+  const ptColW = CW / 5;
+  PRODUCT_TYPES.forEach((pt, i) => {
+    const col = i % 5;
+    const row = Math.floor(i / 5);
+    const cx = ML + col * ptColW;
+    const cy = y - row * 16;
+    addCB(pdfDoc, page, cx, cy - cbSz + 2, cbSz, intake.product_types?.includes(pt), `pt_${pt.replace(/\s/g,'_')}`);
+    page.drawText(pt, { x: cx + cbSz + 3, y: cy, font: fontNormal, size: 8, color: BLACK });
   });
-  y += 4;
-  // comment line
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.2);
-  doc.line(x + 52, y + 2, pageWidth - 14, y + 2);
-  if (comment) {
-    doc.setFontSize(6.5);
-    doc.setTextColor(80, 80, 80);
-    doc.text(comment.substring(0, 100), x + 52, y + 1.5);
-    doc.setTextColor(0, 0, 0);
-  }
-  return y + 6;
-}
+  y -= (Math.ceil(PRODUCT_TYPES.length / 5)) * 16 + 4;
 
-function maybeAddPage(doc, y, margin = 20) {
-  if (y > 270) {
-    doc.addPage();
-    return 18;
-  }
-  return y;
-}
+  page.drawText('If "Other", specify:', { x: ML, y, font: fontNormal, size: 7.5, color: DARK_GRAY });
+  addText(pdfDoc, page, ML + 84, y - 13, CW - 84, 12, intake.product_types_other, 'pt_other');
+  y -= 22;
 
-// ─── Main PDF generator ───────────────────────────────────────────────────────
-export function generateSupplierIntakePDF(intake = {}) {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const pw = doc.internal.pageSize.getWidth();
-  let y = 14;
+  // Slaughter row
+  y = cbGroup(pdfDoc, page, 'Weekly Slaughter:', ['Yes', 'No', 'N/A'], null, ML, y, cbSz, fontBold, intake.weekly_slaughter, 'slaughter') - 6;
+  page.drawText('Slaughter Volume / Week:', { x: ML + 180, y: y + 6, font: fontNormal, size: 8, color: BLACK });
+  addText(pdfDoc, page, ML + 310, y - 6, 100, 12, intake.weekly_slaughter_volume, 'slaughter_vol');
+  y -= 4;
 
-  // ── Header ──
-  doc.setFillColor(26, 54, 93);
-  doc.rect(0, 0, pw, 22, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(13);
-  doc.setFont('helvetica', 'bold');
-  doc.text('AJC FSQA HUB', 14, 10);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Supplier Intake & Assessment Form', 14, 16);
-  doc.setFontSize(7.5);
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, pw - 14, 16, { align: 'right' });
-  doc.setTextColor(0, 0, 0);
-  y = 28;
-
-  // ── Section 1: Supplier Information ──
-  y = addSectionHeader(doc, '1. SUPPLIER INFORMATION', y, pw);
-  y += 3;
-  const half = (pw - 28) / 2;
-  addTextField(doc, 'Supplier Name *', 14, y, half - 2, intake.supplier_name);
-  addTextField(doc, 'Visit Date *', 16 + half, y, half - 2, intake.visit_date);
-  y += 14;
-  addTextField(doc, 'Visited By', 14, y, half - 2, intake.visited_by);
-  addTextField(doc, 'Supplier Address', 16 + half, y, half - 2, intake.supplier_address);
-  y += 14;
-  const third = (pw - 28) / 3;
-  addTextField(doc, 'Contact Person', 14, y, third - 2, intake.supplier_contact_name);
-  addTextField(doc, 'Contact Email', 16 + third, y, third - 2, intake.supplier_contact_email);
-  addTextField(doc, 'Contact Phone', 18 + 2 * third, y, third - 2, intake.supplier_contact_phone);
-  y += 16;
-
-  // ── Section 2: Products & Operations ──
-  y = maybeAddPage(doc, y);
-  y = addSectionHeader(doc, '2. PRODUCTS & OPERATIONS', y, pw);
-  y += 4;
-  y = addCheckList(doc, 'Product Types:', PRODUCT_TYPES, intake.product_types, 14, y, 5);
-  y += 1;
-  y = addYesNoField(doc, 'Weekly Slaughter', intake.weekly_slaughter, 14, y);
-  if (intake.weekly_slaughter === 'Yes') {
-    doc.setFontSize(7);
-    doc.text('Slaughter Volume/Week:', 14, y);
-    doc.setDrawColor(180, 180, 180);
-    doc.rect(52, y - 3, 40, 5);
-    if (intake.weekly_slaughter_volume) doc.text(intake.weekly_slaughter_volume, 53, y);
-    y += 7;
-  }
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Number of Employees:', 14, y);
-  doc.setFont('helvetica', 'normal');
-  doc.setDrawColor(180, 180, 180);
-  doc.rect(52, y - 3, 25, 5);
-  if (intake.number_of_employees) doc.setFontSize(7), doc.text(String(intake.number_of_employees), 53, y);
-  y += 7;
+  page.drawText('Number of Employees:', { x: ML, y, font: fontBold, size: 8, color: BLACK });
+  addText(pdfDoc, page, ML + fontBold.widthOfTextAtSize('Number of Employees:', 8) + 6, y - 13, 60, 12, intake.number_of_employees, 'num_employees');
+  y -= 22;
 
   // Production lines table
-  if (intake.product_production_lines?.length > 0) {
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Weekly Production by Product / Cut:', 14, y);
-    y += 4;
-    // Table header
-    doc.setFillColor(230, 236, 245);
-    doc.rect(14, y - 3.5, pw - 28, 5.5, 'F');
-    doc.setFontSize(6.5);
-    doc.text('Category', 16, y);
-    doc.text('Cut / SKU', 60, y);
-    doc.text('Weekly Volume', 110, y);
-    doc.text('Unit', 155, y);
-    y += 4;
-    doc.setFont('helvetica', 'normal');
-    intake.product_production_lines.forEach((line, i) => {
-      y = maybeAddPage(doc, y);
-      if (i % 2 === 0) {
-        doc.setFillColor(248, 250, 252);
-        doc.rect(14, y - 3.5, pw - 28, 5.5, 'F');
-      }
-      doc.setFontSize(7);
-      doc.text(line.category || '—', 16, y);
-      doc.text(line.cut || '—', 60, y);
-      doc.text(line.volume || '—', 110, y);
-      doc.text(line.unit || '—', 155, y);
-      doc.setDrawColor(220, 220, 220);
-      doc.line(14, y + 2, pw - 14, y + 2);
-      y += 6;
-    });
-  } else {
-    // Blank rows for hand-fill
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Weekly Production by Product / Cut:', 14, y);
-    y += 4;
-    doc.setFillColor(230, 236, 245);
-    doc.rect(14, y - 3.5, pw - 28, 5.5, 'F');
-    doc.setFontSize(6.5);
-    doc.text('Category', 16, y); doc.text('Cut / SKU', 60, y);
-    doc.text('Weekly Volume', 110, y); doc.text('Unit', 155, y);
-    y += 4;
-    doc.setFont('helvetica', 'normal');
-    doc.setDrawColor(200, 200, 200);
-    for (let r = 0; r < 5; r++) {
-      doc.rect(14, y - 3.5, pw - 28, 6);
-      doc.line(56, y - 3.5, 56, y + 2.5);
-      doc.line(106, y - 3.5, 106, y + 2.5);
-      doc.line(150, y - 3.5, 150, y + 2.5);
-      y += 6;
-    }
-  }
-  y += 2;
+  page.drawText('Weekly Production by Product / Cut:', { x: ML, y, font: fontBold, size: 8, color: BLACK });
+  y -= 6;
 
-  // ── Section 3: Food Safety Programs ──
-  y = maybeAddPage(doc, y);
-  y = addSectionHeader(doc, '3. FOOD SAFETY PROGRAMS', y, pw);
-  y += 4;
+  const tCols = [CW * 0.28, CW * 0.32, CW * 0.22, CW * 0.18];
+  const tX = [ML, ML + tCols[0], ML + tCols[0] + tCols[1], ML + tCols[0] + tCols[1] + tCols[2]];
+  const tH = 15;
+  const tHdrs = ['Category', 'Cut / SKU', 'Weekly Volume', 'Unit'];
 
-  // Food Safety Plan
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Food Safety Plan:', 14, y);
-  doc.setFont('helvetica', 'normal');
-  let cx2 = 46;
-  ['HACCP', 'HARPC', 'Both', 'None'].forEach(opt => {
-    checkBox(doc, cx2, y - 3.5, intake.food_safety_plan === opt);
-    doc.setFontSize(7);
-    doc.text(opt, cx2 + 5, y);
-    cx2 += 18;
+  // Header
+  page.drawRectangle({ x: ML, y: y - tH, width: CW, height: tH, color: LIGHT_BLUE });
+  page.drawRectangle({ x: ML, y: y - tH, width: CW, height: tH, borderColor: MID_GRAY, borderWidth: 0.5 });
+  tHdrs.forEach((h, i) => {
+    page.drawText(h, { x: tX[i] + 3, y: y - tH + 4, font: fontBold, size: 7.5, color: BLACK });
+    if (i > 0) page.drawLine({ start: { x: tX[i], y }, end: { x: tX[i], y: y - tH }, thickness: 0.4, color: MID_GRAY });
   });
-  y += 6;
+  y -= tH;
 
-  y = addYesNoField(doc, '3rd Party Audit Present', intake.third_party_audit, 14, y);
-  if (intake.third_party_audit === 'Yes' || !intake.third_party_audit) {
-    y = addCheckList(doc, 'Audit Certifications:', AUDIT_TYPES, intake.third_party_audit_types, 14, y, 5);
-    addTextField(doc, 'Audit / Certificate Expiry Date', 14, y, 50, intake.audit_expiry_date);
-    y += 12;
-  }
+  const prodLines = intake.product_production_lines?.length > 0
+    ? intake.product_production_lines
+    : Array(5).fill({});
 
-  // Prerequisite programs
-  const programs = [
+  prodLines.forEach((line, ri) => {
+    if (ri % 2 === 1) page.drawRectangle({ x: ML, y: y - tH, width: CW, height: tH, color: LIGHT_GRAY });
+    page.drawRectangle({ x: ML, y: y - tH, width: CW, height: tH, borderColor: MID_GRAY, borderWidth: 0.4 });
+    tCols.forEach((cw, ci) => {
+      if (ci > 0) page.drawLine({ start: { x: tX[ci], y }, end: { x: tX[ci], y: y - tH }, thickness: 0.4, color: MID_GRAY });
+      const val = line && [line.category, line.cut, line.volume, line.unit][ci];
+      addText(pdfDoc, page, tX[ci] + 1, y - tH + 1, cw - 2, tH - 2, val || '', `prod_${ri}_${ci}`);
+    });
+    y -= tH;
+  });
+  y -= 8;
+
+  // ── SECTION 3: Food Safety Programs ─────────────────────────────────────────
+  if (y < 160) { page = makePage(pdfDoc, fontBold, fontNormal, logoImage); y = PH - 64; }
+  y = secHeader(page, '3.  FOOD SAFETY PROGRAMS', y, fontBold);
+
+  cbGroup(pdfDoc, page, 'Food Safety Plan:', ['HACCP', 'HARPC', 'Both', 'None'], null, ML, y, cbSz, fontBold, intake.food_safety_plan, 'fsp');
+  y -= 16;
+
+  cbGroup(pdfDoc, page, '3rd Party Audit Present:', ['Yes', 'No'], null, ML, y, cbSz, fontBold, intake.third_party_audit, 'audit_present');
+  y -= 16;
+
+  page.drawText('Audit Certifications:', { x: ML, y, font: fontBold, size: 8, color: BLACK });
+  y -= 14;
+  const atColW = CW / 5;
+  AUDIT_TYPES.forEach((at, i) => {
+    const col = i % 5;
+    const row = Math.floor(i / 5);
+    const cx = ML + col * atColW;
+    const cy = y - row * 16;
+    addCB(pdfDoc, page, cx, cy - cbSz + 2, cbSz, intake.third_party_audit_types?.includes(at), `audit_${at.replace(/[\s.]/g,'_')}`);
+    page.drawText(at, { x: cx + cbSz + 3, y: cy, font: fontNormal, size: 8, color: BLACK });
+  });
+  y -= (Math.ceil(AUDIT_TYPES.length / 5)) * 16 + 4;
+
+  page.drawText('If "Other", specify:', { x: ML, y, font: fontNormal, size: 7.5, color: DARK_GRAY });
+  addText(pdfDoc, page, ML + 84, y - 13, CW * 0.35, 12, intake.third_party_audit_other, 'audit_other');
+  page.drawText('Expiry Date:', { x: ML + CW * 0.42, y, font: fontBold, size: 8, color: BLACK });
+  addText(pdfDoc, page, ML + CW * 0.42 + fontBold.widthOfTextAtSize('Expiry Date:', 8) + 5, y - 13, 90, 12, intake.audit_expiry_date, 'audit_expiry');
+  y -= 22;
+
+  // Prerequisite programs — 3 per row
+  page.drawText('Prerequisite Programs:', { x: ML, y, font: fontBold, size: 8, color: BLACK });
+  y -= 14;
+  const progList = [
     ['GMP Program', 'gmp_program'],
     ['Allergen Program', 'allergen_program'],
     ['Pest Control Program', 'pest_control_program'],
     ['Water Testing Program', 'water_testing_program'],
     ['Traceability Program', 'traceability_program'],
   ];
-  const progColW = (pw - 28) / 3;
-  programs.forEach(([ label, key ], i) => {
+  const pColW = CW / 3;
+  progList.forEach(([lbl, key], i) => {
     const col = i % 3;
     const row = Math.floor(i / 3);
-    const px = 14 + col * progColW;
-    const py = y + row * 8;
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.text(label + ':', px, py);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    let bx = px + doc.getTextWidth(label + ': ') + 1;
-    ['Yes', 'No'].forEach(opt => {
-      checkBox(doc, bx, py - 3.5, intake[key] === opt);
-      doc.text(opt, bx + 5, py);
-      bx += 14;
+    const px = ML + col * pColW;
+    const py = y - row * 16;
+    page.drawText(lbl + ':', { x: px, y: py, font: fontBold, size: 8, color: BLACK });
+    let bx = px + fontBold.widthOfTextAtSize(lbl + ':', 8) + 4;
+    for (const opt of ['Yes', 'No']) {
+      addCB(pdfDoc, page, bx, py - cbSz + 2, cbSz, intake[key] === opt, `prog_${key}_${opt}`);
+      page.drawText(opt, { x: bx + cbSz + 2, y: py, font: fontNormal, size: 8, color: BLACK });
+      bx += cbSz + fontNormal.widthOfTextAtSize(opt, 8) + 8;
+    }
+  });
+  y -= Math.ceil(progList.length / 3) * 16 + 8;
+
+  // ── SECTION 4: Plant Inspection ──────────────────────────────────────────────
+  if (y < 200) { page = makePage(pdfDoc, fontBold, fontNormal, logoImage); y = PH - 64; }
+  y = secHeader(page, '4.  PLANT INSPECTION WALK-THROUGH', y, fontBold);
+
+  cbGroup(pdfDoc, page, 'Plant Inspection Conducted:', ['Yes', 'No'], null, ML, y, cbSz, fontBold, intake.plant_inspection_conducted, 'insp_conducted');
+  y -= 20;
+
+  // Table header
+  const areaW = CW * 0.27;
+  const ratingW = CW * 0.105;
+  const commentW = CW - areaW - 4 * ratingW;
+  const iX = [ML, ML + areaW, ML + areaW + ratingW, ML + areaW + 2 * ratingW, ML + areaW + 3 * ratingW, ML + areaW + 4 * ratingW];
+  const iH = 17;
+
+  page.drawRectangle({ x: ML, y: y - iH, width: CW, height: iH, color: LIGHT_BLUE });
+  page.drawRectangle({ x: ML, y: y - iH, width: CW, height: iH, borderColor: MID_GRAY, borderWidth: 0.5 });
+  page.drawText('Area', { x: iX[0] + 3, y: y - iH + 5, font: fontBold, size: 7.5, color: BLACK });
+  ['Satisfactory', 'Needs Impr.', 'Unsatisfactory', 'N/A', 'Comments'].forEach((h, i) => {
+    page.drawLine({ start: { x: iX[i + 1], y }, end: { x: iX[i + 1], y: y - iH }, thickness: 0.4, color: MID_GRAY });
+    page.drawText(h, { x: iX[i + 1] + 2, y: y - iH + 5, font: fontBold, size: 6.5, color: BLACK });
+  });
+  y -= iH;
+
+  INSPECTION_AREAS.forEach(([key, label], ri) => {
+    if (y < 60) { page = makePage(pdfDoc, fontBold, fontNormal, logoImage); y = PH - 64; }
+    if (ri % 2 === 1) page.drawRectangle({ x: ML, y: y - iH, width: CW, height: iH, color: LIGHT_GRAY });
+    page.drawRectangle({ x: ML, y: y - iH, width: CW, height: iH, borderColor: MID_GRAY, borderWidth: 0.4 });
+    page.drawText(label, { x: iX[0] + 3, y: y - iH + 5, font: fontNormal, size: 7.5, color: BLACK });
+    ['Satisfactory', 'Needs Improvement', 'Unsatisfactory', 'N/A'].forEach((opt, ci) => {
+      page.drawLine({ start: { x: iX[ci + 1], y }, end: { x: iX[ci + 1], y: y - iH }, thickness: 0.4, color: MID_GRAY });
+      const cbcx = iX[ci + 1] + (ratingW - cbSz) / 2;
+      addCB(pdfDoc, page, cbcx, y - iH + (iH - cbSz) / 2, cbSz, intake[key] === opt, `insp_${key}_${opt.replace(/\s/g,'_')}`);
+    });
+    page.drawLine({ start: { x: iX[5], y }, end: { x: iX[5], y: y - iH }, thickness: 0.4, color: MID_GRAY });
+    addText(pdfDoc, page, iX[5] + 1, y - iH + 1, commentW - 2, iH - 2, intake[`${key}_comment`] || '', `insp_${key}_comment`);
+    y -= iH;
+  });
+  y -= 8;
+
+  // Overall rating
+  cbGroup(pdfDoc, page, 'Overall Inspection Rating:', ['Pass', 'Conditional Pass', 'Fail'], null, ML, y, cbSz, fontBold, intake.inspection_overall_rating, 'overall_rating');
+  y -= 20;
+
+  page.drawText('Inspection Notes:', { x: ML, y, font: fontBold, size: 8, color: BLACK });
+  y -= 5;
+  addText(pdfDoc, page, ML, y - 38, CW, 38, intake.inspection_notes || '', 'inspection_notes', true);
+  y -= 48;
+
+  // ── SECTION 5: General Notes ─────────────────────────────────────────────────
+  if (y < 120) { page = makePage(pdfDoc, fontBold, fontNormal, logoImage); y = PH - 64; }
+  y = secHeader(page, '5.  GENERAL NOTES', y, fontBold);
+  addText(pdfDoc, page, ML, y - 50, CW, 50, intake.general_notes || '', 'general_notes', true);
+  y -= 62;
+
+  // ── SECTION 6: Signatures ────────────────────────────────────────────────────
+  if (y < 100) { page = makePage(pdfDoc, fontBold, fontNormal, logoImage); y = PH - 64; }
+  y = secHeader(page, '6.  SIGNATURES', y, fontBold);
+  y -= 6;
+
+  const sigW = (CW - 14) / 2;
+  [['FSQA Representative', 'sig_fsqa'], ['Supplier Representative', 'sig_supplier']].forEach(([lbl, key], i) => {
+    const sx = ML + i * (sigW + 14);
+    page.drawRectangle({ x: sx, y: y - 56, width: sigW, height: 56, borderColor: MID_GRAY, borderWidth: 0.7 });
+    page.drawText(lbl, { x: sx + 5, y: y - 14, font: fontBold, size: 8, color: BLACK });
+    page.drawText('Signature:', { x: sx + 5, y: y - 26, font: fontNormal, size: 7.5, color: DARK_GRAY });
+    page.drawLine({ start: { x: sx + 5, y: y - 40 }, end: { x: sx + sigW - 5, y: y - 40 }, thickness: 0.6, color: MID_GRAY });
+    page.drawText('Date:', { x: sx + 5, y: y - 49, font: fontNormal, size: 7.5, color: DARK_GRAY });
+    addText(pdfDoc, page, sx + 28, y - 56 + 3, sigW - 33, 11, '', `${key}_date`);
+  });
+
+  // Update page numbers in footers
+  const totalPages = pdfDoc.getPageCount();
+  pdfDoc.getPages().forEach((pg, idx) => {
+    pg.drawText(`Page ${idx + 1} of ${totalPages}`, {
+      x: PW - ML - 60, y: 20, font: fontNormal, size: 6.5, color: MID_GRAY,
     });
   });
-  y += Math.ceil(programs.length / 3) * 8 + 2;
 
-  // ── Section 4: Plant Inspection ──
-  y = maybeAddPage(doc, y);
-  y = addSectionHeader(doc, '4. PLANT INSPECTION WALK-THROUGH', y, pw);
-  y += 4;
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Plant Inspection Conducted:', 14, y);
-  doc.setFont('helvetica', 'normal');
-  let pix = 62;
-  ['Yes', 'No'].forEach(opt => {
-    checkBox(doc, pix, y - 3.5, intake.plant_inspection_conducted === opt);
-    doc.setFontSize(7);
-    doc.text(opt, pix + 5, y);
-    pix += 14;
-  });
-  y += 6;
-
-  // Column headers
-  doc.setFillColor(230, 236, 245);
-  doc.rect(14, y - 3.5, pw - 28, 5.5, 'F');
-  doc.setFontSize(6.5);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Area', 16, y);
-  doc.text('Satisfactory', 68, y);
-  doc.text('Needs Improvement', 98, y);
-  doc.text('Unsatisfactory', 133, y);
-  doc.text('N/A', 163, y);
-  doc.text('Comments', 175, y);
-  y += 5;
-  doc.setFont('helvetica', 'normal');
-
-  const inspKeys = [
-    'inspection_exterior', 'inspection_receiving', 'inspection_storage', 'inspection_processing',
-    'inspection_sanitation', 'inspection_employee_hygiene', 'inspection_pest_control',
-    'inspection_temperature_control', 'inspection_labeling',
-  ];
-  INSPECTION_AREAS.forEach((area, i) => {
-    y = maybeAddPage(doc, y);
-    if (i % 2 === 0) { doc.setFillColor(250, 251, 253); doc.rect(14, y - 3.5, pw - 28, 7.5, 'F'); }
-    doc.setFontSize(7);
-    doc.text(area, 16, y);
-    checkBox(doc, 68, y - 3.5, intake[inspKeys[i]] === 'Satisfactory');
-    checkBox(doc, 102, y - 3.5, intake[inspKeys[i]] === 'Needs Improvement');
-    checkBox(doc, 137, y - 3.5, intake[inspKeys[i]] === 'Unsatisfactory');
-    checkBox(doc, 163, y - 3.5, intake[inspKeys[i]] === 'N/A');
-    // comment box
-    doc.setDrawColor(200, 200, 200);
-    doc.rect(173, y - 3.5, pw - 187, 7);
-    const comment = intake[`${inspKeys[i]}_comment`];
-    if (comment) {
-      doc.setFontSize(5.5);
-      doc.setTextColor(60, 60, 60);
-      doc.text(comment.substring(0, 45), 174, y);
-      doc.setTextColor(0, 0, 0);
-    }
-    doc.setDrawColor(220, 220, 220);
-    doc.line(14, y + 4, pw - 14, y + 4);
-    y += 8;
-  });
-
-  y += 2;
-  // Overall rating
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Overall Inspection Rating:', 14, y);
-  doc.setFont('helvetica', 'normal');
-  let orx = 63;
-  ['Pass', 'Conditional Pass', 'Fail'].forEach(opt => {
-    checkBox(doc, orx, y - 3.5, intake.inspection_overall_rating === opt);
-    doc.setFontSize(7);
-    doc.text(opt, orx + 5, y);
-    orx += 30;
-  });
-  y += 7;
-
-  // Inspection notes
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Inspection Notes:', 14, y);
-  y += 3;
-  doc.setDrawColor(180, 180, 180);
-  doc.rect(14, y, pw - 28, 18);
-  if (intake.inspection_notes) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    const lines = doc.splitTextToSize(intake.inspection_notes, pw - 32);
-    doc.text(lines.slice(0, 5), 16, y + 4);
-  }
-  y += 20;
-
-  // ── Section 5: General Notes & Signature ──
-  y = maybeAddPage(doc, y);
-  y = addSectionHeader(doc, '5. GENERAL NOTES', y, pw);
-  y += 3;
-  doc.setDrawColor(180, 180, 180);
-  doc.rect(14, y, pw - 28, 22);
-  if (intake.general_notes) {
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    const lines = doc.splitTextToSize(intake.general_notes, pw - 32);
-    doc.text(lines.slice(0, 6), 16, y + 4);
-  }
-  y += 25;
-
-  // Signature block
-  y = maybeAddPage(doc, y);
-  doc.setDrawColor(150, 150, 150);
-  const sigW = (pw - 36) / 2;
-  doc.line(14, y + 8, 14 + sigW, y + 8);
-  doc.line(22 + sigW, y + 8, 22 + 2 * sigW, y + 8);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 100, 100);
-  doc.text('FSQA Representative Signature & Date', 14, y + 11);
-  doc.text('Supplier Representative Signature & Date', 22 + sigW, y + 11);
-  doc.setTextColor(0, 0, 0);
-  y += 16;
-
-  // Footer on all pages
-  const totalPages = doc.getNumberOfPages();
-  for (let p = 1; p <= totalPages; p++) {
-    doc.setPage(p);
-    doc.setFontSize(6.5);
-    doc.setTextColor(150, 150, 150);
-    doc.text('AJC FSQA Hub — Supplier Intake Form', 14, 293);
-    doc.text(`Page ${p} of ${totalPages}`, pw - 14, 293, { align: 'right' });
-    doc.setTextColor(0, 0, 0);
-  }
-
-  return doc;
+  return pdfDoc;
 }
 
-// ─── Printable HTML component ─────────────────────────────────────────────────
+// ─── Printable HTML (for Print button) ───────────────────────────────────────
 function PrintableForm({ intake = {} }) {
-  const PRODUCT_TYPES_ALL = ['Chicken', 'Pork', 'Beef', 'Fish', 'Turkey', 'Vegetables', 'Fruits', 'French Fries', 'Other'];
-  const AUDIT_TYPES_ALL = ['SQF', 'BRC', 'FSSC 22000', 'IFS', 'GLOBALG.A.P.', 'Primus GFS', 'Costco', 'Other'];
-  const inspKeys = [
-    ['inspection_exterior', 'Exterior / Grounds'],
-    ['inspection_receiving', 'Receiving Area'],
-    ['inspection_storage', 'Storage / Warehouse'],
-    ['inspection_processing', 'Processing / Production Floor'],
-    ['inspection_sanitation', 'Sanitation Practices'],
-    ['inspection_employee_hygiene', 'Employee Hygiene & GMP'],
-    ['inspection_pest_control', 'Pest Control Evidence'],
-    ['inspection_temperature_control', 'Temperature Control'],
-    ['inspection_labeling', 'Labeling & Traceability'],
-  ];
-
   const CB = ({ checked }) => (
-    <span style={{ display: 'inline-block', width: 11, height: 11, border: '1.5px solid #555', marginRight: 4, verticalAlign: 'middle', background: checked ? '#1a365d' : 'white', position: 'relative' }}>
-      {checked && <span style={{ position: 'absolute', top: 0, left: 1, color: 'white', fontSize: 9, lineHeight: '10px' }}>✓</span>}
+    <span style={{
+      display: 'inline-block', width: 10, height: 10,
+      border: '1.5px solid #444', marginRight: 3, verticalAlign: 'middle',
+      flexShrink: 0, background: checked ? '#1a365d' : 'white', position: 'relative'
+    }}>
+      {checked && <span style={{ position: 'absolute', top: -1, left: 1, color: 'white', fontSize: 9, lineHeight: '11px', fontWeight: 'bold' }}>✓</span>}
     </span>
   );
-  const Line = ({ label, value, width = '100%' }) => (
-    <div style={{ display: 'inline-block', width, marginBottom: 6, paddingRight: 8 }}>
-      <div style={{ fontSize: 7.5, fontWeight: 'bold', marginBottom: 2 }}>{label}</div>
-      <div style={{ borderBottom: '1px solid #999', minHeight: 16, fontSize: 8, paddingLeft: 2 }}>{value || ''}</div>
+  const Field = ({ label, value, w = '100%' }) => (
+    <div style={{ display: 'inline-block', width: w, paddingRight: 8, marginBottom: 7, verticalAlign: 'top', boxSizing: 'border-box' }}>
+      <div style={{ fontSize: 7, fontWeight: 'bold', marginBottom: 1 }}>{label}</div>
+      <div style={{ borderBottom: '1px solid #888', minHeight: 14, fontSize: 8, paddingLeft: 2 }}>{value || '\u00A0'}</div>
     </div>
   );
   const SecHead = ({ n, title }) => (
-    <div style={{ background: '#1a365d', color: 'white', padding: '3px 8px', fontWeight: 'bold', fontSize: 9, marginTop: 10, marginBottom: 6 }}>
-      {n}. {title.toUpperCase()}
+    <div style={{ background: '#1a365d', color: 'white', padding: '4px 8px', fontWeight: 'bold', fontSize: 9, marginTop: 10, marginBottom: 5 }}>
+      {n}.  {title.toUpperCase()}
     </div>
+  );
+  const Row = ({ children, style }) => (
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', marginBottom: 6, ...style }}>{children}</div>
+  );
+  const CBLabel = ({ opt, checked }) => (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 3, marginRight: 14, fontSize: 8 }}>
+      <CB checked={checked} />{opt}
+    </label>
   );
 
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', fontSize: 8, color: '#000', padding: '10mm', width: '190mm', margin: '0 auto' }}>
+    <div style={{ fontFamily: 'Arial, sans-serif', fontSize: 8, color: '#000', padding: '8mm 10mm', width: '190mm', margin: '0 auto', boxSizing: 'border-box' }}>
       {/* Header */}
       <div style={{ background: '#1a365d', color: 'white', padding: '6px 10px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <div style={{ fontWeight: 'bold', fontSize: 13 }}>AJC FSQA HUB</div>
-          <div style={{ fontSize: 9 }}>Supplier Intake & Assessment Form</div>
+          <div style={{ fontWeight: 'bold', fontSize: 14 }}>AJC FSQA HUB</div>
+          <div style={{ fontSize: 9, opacity: 0.85 }}>Supplier Intake &amp; Assessment Form</div>
         </div>
-        <div style={{ fontSize: 7.5, textAlign: 'right' }}>
-          <div>Date Printed: {new Date().toLocaleDateString()}</div>
+        <div style={{ textAlign: 'right' }}>
+          <img src="https://www.ajcfood.com/themes/custom/ajc/img/logo-ajc.png"
+            alt="AJC" style={{ height: 32, filter: 'brightness(0) invert(1)' }}
+            onError={e => e.target.style.display = 'none'} />
+          <div style={{ fontSize: 7, opacity: 0.7, marginTop: 2 }}>{new Date().toLocaleDateString()}</div>
         </div>
       </div>
 
-      {/* 1 - Supplier Info */}
       <SecHead n="1" title="Supplier Information" />
       <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-        <Line label="Supplier Name *" value={intake.supplier_name} width="50%" />
-        <Line label="Visit Date *" value={intake.visit_date} width="50%" />
-        <Line label="Visited By" value={intake.visited_by} width="50%" />
-        <Line label="Supplier Address" value={intake.supplier_address} width="50%" />
-        <Line label="Contact Person" value={intake.supplier_contact_name} width="34%" />
-        <Line label="Contact Email" value={intake.supplier_contact_email} width="34%" />
-        <Line label="Contact Phone" value={intake.supplier_contact_phone} width="32%" />
+        <Field label="Supplier Name *" value={intake.supplier_name} w="50%" />
+        <Field label="Visit Date *" value={intake.visit_date} w="50%" />
+        <Field label="Visited By" value={intake.visited_by} w="50%" />
+        <Field label="Supplier Address" value={intake.supplier_address} w="50%" />
+        <Field label="Contact Person" value={intake.supplier_contact_name} w="34%" />
+        <Field label="Contact Email" value={intake.supplier_contact_email} w="34%" />
+        <Field label="Contact Phone" value={intake.supplier_contact_phone} w="32%" />
       </div>
 
-      {/* 2 - Products & Operations */}
       <SecHead n="2" title="Products & Operations" />
-      <div style={{ fontWeight: 'bold', fontSize: 7.5, marginBottom: 3 }}>Product Types:</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginBottom: 6 }}>
-        {PRODUCT_TYPES_ALL.map(p => (
-          <label key={p} style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 7.5 }}>
-            <CB checked={intake.product_types?.includes(p)} /> {p}
-          </label>
-        ))}
+      <div style={{ fontWeight: 'bold', fontSize: 7.5, marginBottom: 4 }}>Product Types:</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 18px', marginBottom: 7 }}>
+        {PRODUCT_TYPES.map(p => <CBLabel key={p} opt={p} checked={intake.product_types?.includes(p)} />)}
       </div>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 6 }}>
-        <div>
-          <span style={{ fontWeight: 'bold', fontSize: 7.5 }}>Weekly Slaughter: </span>
-          {['Yes', 'No', 'N/A'].map(o => <label key={o} style={{ fontSize: 7.5, marginRight: 8 }}><CB checked={intake.weekly_slaughter === o} />{o}</label>)}
-        </div>
-        {intake.weekly_slaughter === 'Yes' && <Line label="Slaughter Volume/Week" value={intake.weekly_slaughter_volume} width="30%" />}
-      </div>
-      <Line label="Number of Employees" value={intake.number_of_employees} width="30%" />
-
-      {/* Production Lines Table */}
-      <div style={{ fontWeight: 'bold', fontSize: 7.5, marginTop: 6, marginBottom: 3 }}>Weekly Production by Product / Cut:</div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 7.5 }}>
+      <Row>
+        <span style={{ fontWeight: 'bold', fontSize: 8, marginRight: 6 }}>Weekly Slaughter:</span>
+        {['Yes', 'No', 'N/A'].map(o => <CBLabel key={o} opt={o} checked={intake.weekly_slaughter === o} />)}
+        <Field label="Slaughter Volume / Week" value={intake.weekly_slaughter_volume} w="28%" />
+      </Row>
+      <Field label="Number of Employees" value={intake.number_of_employees} w="25%" />
+      <div style={{ fontWeight: 'bold', fontSize: 7.5, marginTop: 4, marginBottom: 3 }}>Weekly Production by Product / Cut:</div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 8 }}>
         <thead>
           <tr style={{ background: '#e6ecf5' }}>
-            <th style={{ border: '1px solid #ccc', padding: '2px 4px', textAlign: 'left' }}>Category</th>
-            <th style={{ border: '1px solid #ccc', padding: '2px 4px', textAlign: 'left' }}>Cut / SKU</th>
-            <th style={{ border: '1px solid #ccc', padding: '2px 4px', textAlign: 'left' }}>Weekly Volume</th>
-            <th style={{ border: '1px solid #ccc', padding: '2px 4px', textAlign: 'left' }}>Unit</th>
+            {['Category', 'Cut / SKU', 'Weekly Volume', 'Unit'].map(h => (
+              <th key={h} style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'left', fontSize: 7.5 }}>{h}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {(intake.product_production_lines?.length > 0 ? intake.product_production_lines : Array(5).fill({})).map((line, i) => (
-            <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
-              <td style={{ border: '1px solid #ddd', padding: '3px 4px', height: 14 }}>{line.category || ''}</td>
-              <td style={{ border: '1px solid #ddd', padding: '3px 4px' }}>{line.cut || ''}</td>
-              <td style={{ border: '1px solid #ddd', padding: '3px 4px' }}>{line.volume || ''}</td>
-              <td style={{ border: '1px solid #ddd', padding: '3px 4px' }}>{line.unit || ''}</td>
+            <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f7f9fc' }}>
+              <td style={{ border: '1px solid #ccc', padding: '4px 5px', height: 14 }}>{line.category || ''}</td>
+              <td style={{ border: '1px solid #ccc', padding: '4px 5px' }}>{line.cut || ''}</td>
+              <td style={{ border: '1px solid #ccc', padding: '4px 5px' }}>{line.volume || ''}</td>
+              <td style={{ border: '1px solid #ccc', padding: '4px 5px' }}>{line.unit || ''}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* 3 - Food Safety Programs */}
       <SecHead n="3" title="Food Safety Programs" />
-      <div style={{ marginBottom: 5 }}>
-        <span style={{ fontWeight: 'bold', fontSize: 7.5 }}>Food Safety Plan: </span>
-        {['HACCP', 'HARPC', 'Both', 'None'].map(o => <label key={o} style={{ fontSize: 7.5, marginRight: 10 }}><CB checked={intake.food_safety_plan === o} />{o}</label>)}
+      <Row>
+        <span style={{ fontWeight: 'bold', fontSize: 8, marginRight: 6 }}>Food Safety Plan:</span>
+        {['HACCP', 'HARPC', 'Both', 'None'].map(o => <CBLabel key={o} opt={o} checked={intake.food_safety_plan === o} />)}
+      </Row>
+      <Row>
+        <span style={{ fontWeight: 'bold', fontSize: 8, marginRight: 6 }}>3rd Party Audit Present:</span>
+        {['Yes', 'No'].map(o => <CBLabel key={o} opt={o} checked={intake.third_party_audit === o} />)}
+      </Row>
+      <div style={{ fontWeight: 'bold', fontSize: 7.5, marginBottom: 4 }}>Audit Certifications:</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 18px', marginBottom: 6 }}>
+        {AUDIT_TYPES.map(p => <CBLabel key={p} opt={p} checked={intake.third_party_audit_types?.includes(p)} />)}
       </div>
-      <div style={{ marginBottom: 5 }}>
-        <span style={{ fontWeight: 'bold', fontSize: 7.5 }}>3rd Party Audit Present: </span>
-        {['Yes', 'No'].map(o => <label key={o} style={{ fontSize: 7.5, marginRight: 10 }}><CB checked={intake.third_party_audit === o} />{o}</label>)}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
+        <Field label='If "Other", specify' value={intake.third_party_audit_other} w="40%" />
+        <Field label="Audit / Certificate Expiry Date" value={intake.audit_expiry_date} w="35%" />
       </div>
-      <div style={{ fontWeight: 'bold', fontSize: 7.5, marginBottom: 3 }}>Audit Certifications:</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginBottom: 5 }}>
-        {AUDIT_TYPES_ALL.map(p => (
-          <label key={p} style={{ fontSize: 7.5 }}><CB checked={intake.third_party_audit_types?.includes(p)} />{p}</label>
-        ))}
-      </div>
-      <Line label="Audit / Certificate Expiry Date" value={intake.audit_expiry_date} width="35%" />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', marginTop: 5 }}>
+      <div style={{ fontWeight: 'bold', fontSize: 7.5, marginBottom: 4 }}>Prerequisite Programs:</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px 0', marginBottom: 4 }}>
         {[['GMP Program', 'gmp_program'], ['Allergen Program', 'allergen_program'], ['Pest Control Program', 'pest_control_program'], ['Water Testing Program', 'water_testing_program'], ['Traceability Program', 'traceability_program']].map(([lbl, key]) => (
-          <div key={key}>
-            <span style={{ fontWeight: 'bold', fontSize: 7.5 }}>{lbl}: </span>
-            {['Yes', 'No'].map(o => <label key={o} style={{ fontSize: 7.5, marginRight: 6 }}><CB checked={intake[key] === o} />{o}</label>)}
+          <div key={key} style={{ width: '33%', display: 'flex', alignItems: 'center', gap: 4, fontSize: 8 }}>
+            <span style={{ fontWeight: 'bold', marginRight: 3 }}>{lbl}:</span>
+            {['Yes', 'No'].map(o => <CBLabel key={o} opt={o} checked={intake[key] === o} />)}
           </div>
         ))}
       </div>
 
-      {/* 4 - Plant Inspection */}
       <SecHead n="4" title="Plant Inspection Walk-Through" />
-      <div style={{ marginBottom: 6 }}>
-        <span style={{ fontWeight: 'bold', fontSize: 7.5 }}>Plant Inspection Conducted: </span>
-        {['Yes', 'No'].map(o => <label key={o} style={{ fontSize: 7.5, marginRight: 10 }}><CB checked={intake.plant_inspection_conducted === o} />{o}</label>)}
-      </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 7.5, marginBottom: 6 }}>
+      <Row style={{ marginBottom: 6 }}>
+        <span style={{ fontWeight: 'bold', fontSize: 8, marginRight: 6 }}>Plant Inspection Conducted:</span>
+        {['Yes', 'No'].map(o => <CBLabel key={o} opt={o} checked={intake.plant_inspection_conducted === o} />)}
+      </Row>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 8, marginBottom: 6 }}>
         <thead>
           <tr style={{ background: '#e6ecf5' }}>
-            <th style={{ border: '1px solid #ccc', padding: '2px 4px', textAlign: 'left', width: '28%' }}>Area</th>
-            <th style={{ border: '1px solid #ccc', padding: '2px 4px', width: '12%' }}>Satisfactory</th>
-            <th style={{ border: '1px solid #ccc', padding: '2px 4px', width: '16%' }}>Needs Improvement</th>
-            <th style={{ border: '1px solid #ccc', padding: '2px 4px', width: '14%' }}>Unsatisfactory</th>
-            <th style={{ border: '1px solid #ccc', padding: '2px 4px', width: '8%' }}>N/A</th>
-            <th style={{ border: '1px solid #ccc', padding: '2px 4px', textAlign: 'left' }}>Comments</th>
+            <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'left', width: '26%', fontSize: 7.5 }}>Area</th>
+            {['Satisfactory', 'Needs Improvement', 'Unsatisfactory', 'N/A'].map(h => (
+              <th key={h} style={{ border: '1px solid #bbb', padding: '3px 5px', width: '10%', textAlign: 'center', fontSize: 7 }}>{h}</th>
+            ))}
+            <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'left', fontSize: 7.5 }}>Comments</th>
           </tr>
         </thead>
         <tbody>
-          {inspKeys.map(([key, label], i) => (
-            <tr key={key} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
-              <td style={{ border: '1px solid #ddd', padding: '3px 4px' }}>{label}</td>
+          {INSPECTION_AREAS.map(([key, label], i) => (
+            <tr key={key} style={{ background: i % 2 === 0 ? '#fff' : '#f7f9fc' }}>
+              <td style={{ border: '1px solid #ccc', padding: '4px 5px' }}>{label}</td>
               {['Satisfactory', 'Needs Improvement', 'Unsatisfactory', 'N/A'].map(opt => (
-                <td key={opt} style={{ border: '1px solid #ddd', padding: '3px 4px', textAlign: 'center' }}>
+                <td key={opt} style={{ border: '1px solid #ccc', padding: '3px 5px', textAlign: 'center' }}>
                   <CB checked={intake[key] === opt} />
                 </td>
               ))}
-              <td style={{ border: '1px solid #ddd', padding: '3px 4px', fontSize: 7 }}>{intake[`${key}_comment`] || ''}</td>
+              <td style={{ border: '1px solid #ccc', padding: '4px 5px', fontSize: 7.5 }}>{intake[`${key}_comment`] || ''}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div style={{ marginBottom: 5 }}>
-        <span style={{ fontWeight: 'bold', fontSize: 7.5 }}>Overall Inspection Rating: </span>
-        {['Pass', 'Conditional Pass', 'Fail'].map(o => <label key={o} style={{ fontSize: 7.5, marginRight: 12 }}><CB checked={intake.inspection_overall_rating === o} />{o}</label>)}
-      </div>
+      <Row>
+        <span style={{ fontWeight: 'bold', fontSize: 8, marginRight: 6 }}>Overall Inspection Rating:</span>
+        {['Pass', 'Conditional Pass', 'Fail'].map(o => <CBLabel key={o} opt={o} checked={intake.inspection_overall_rating === o} />)}
+      </Row>
       <div style={{ fontWeight: 'bold', fontSize: 7.5, marginBottom: 2 }}>Inspection Notes:</div>
-      <div style={{ border: '1px solid #ccc', minHeight: 28, padding: '2px 4px', fontSize: 7.5, marginBottom: 6 }}>{intake.inspection_notes || ''}</div>
+      <div style={{ border: '1px solid #ccc', minHeight: 30, padding: '3px 5px', fontSize: 8, marginBottom: 6 }}>{intake.inspection_notes || ''}</div>
 
-      {/* 5 - General Notes */}
       <SecHead n="5" title="General Notes" />
-      <div style={{ border: '1px solid #ccc', minHeight: 36, padding: '2px 4px', fontSize: 7.5, marginBottom: 10 }}>{intake.general_notes || ''}</div>
+      <div style={{ border: '1px solid #ccc', minHeight: 40, padding: '3px 5px', fontSize: 8, marginBottom: 10 }}>{intake.general_notes || ''}</div>
 
-      {/* Signature block */}
-      <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ borderBottom: '1px solid #555', height: 20 }} />
-          <div style={{ fontSize: 7, color: '#666', marginTop: 2 }}>FSQA Representative Signature & Date</div>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ borderBottom: '1px solid #555', height: 20 }} />
-          <div style={{ fontSize: 7, color: '#666', marginTop: 2 }}>Supplier Representative Signature & Date</div>
-        </div>
+      <SecHead n="6" title="Signatures" />
+      <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+        {['FSQA Representative', 'Supplier Representative'].map(lbl => (
+          <div key={lbl} style={{ flex: 1, border: '1px solid #ccc', padding: '6px 8px', minHeight: 55 }}>
+            <div style={{ fontWeight: 'bold', fontSize: 7.5, marginBottom: 22 }}>{lbl}</div>
+            <div style={{ borderBottom: '1px solid #555', marginBottom: 4 }} />
+            <div style={{ fontSize: 7, color: '#666' }}>Signature &amp; Date</div>
+          </div>
+        ))}
       </div>
-
       <div style={{ marginTop: 10, borderTop: '1px solid #ddd', paddingTop: 4, fontSize: 6.5, color: '#aaa', display: 'flex', justifyContent: 'space-between' }}>
         <span>AJC FSQA Hub — Supplier Intake Form</span>
-        <span>For internal use only</span>
+        <span>CONFIDENTIAL</span>
       </div>
     </div>
   );
 }
 
-// ─── Exported buttons component ───────────────────────────────────────────────
+// ─── Exported buttons ─────────────────────────────────────────────────────────
 export default function SupplierIntakePDFButtons({ intake = {} }) {
   const printRef = useRef(null);
 
-  const handleDownloadPDF = () => {
-    const doc = generateSupplierIntakePDF(intake);
-    const name = intake.supplier_name
-      ? `supplier-intake-${intake.supplier_name.replace(/\s+/g, '-').toLowerCase()}.pdf`
-      : 'supplier-intake-form.pdf';
-    doc.save(name);
+  const handleDownloadPDF = async () => {
+    try {
+      const pdfDoc = await generateSupplierIntakePDF(intake);
+      const bytes = await pdfDoc.save();
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = intake.supplier_name
+        ? `supplier-intake-${intake.supplier_name.replace(/\s+/g, '-').toLowerCase()}.pdf`
+        : 'supplier-intake-form.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      alert('Failed to generate PDF: ' + err.message);
+    }
   };
 
   const handlePrint = () => {
     const content = printRef.current?.innerHTML;
     if (!content) return;
-    const win = window.open('', '_blank', 'width=900,height=700');
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Supplier Intake Form${intake.supplier_name ? ' — ' + intake.supplier_name : ''}</title>
-          <style>
-            @media print { body { margin: 0; } }
-            body { margin: 0; background: white; }
-            input[type=checkbox] { accent-color: #1a365d; }
-          </style>
-        </head>
-        <body>${content}</body>
-        <script>window.onload = () => { window.print(); }</script>
-      </html>
-    `);
+    const win = window.open('', '_blank', 'width=960,height=800');
+    win.document.write(`<!DOCTYPE html><html><head>
+      <title>Supplier Intake Form${intake.supplier_name ? ' — ' + intake.supplier_name : ''}</title>
+      <style>
+        @page { size: A4; margin: 0; }
+        @media print { body { margin: 0; } }
+        body { margin: 0; background: white; }
+      </style>
+    </head><body>${content}<script>window.onload=()=>window.print();<\/script></body></html>`);
     win.document.close();
   };
 
   return (
     <>
-      {/* Hidden printable DOM element */}
       <div style={{ display: 'none' }}>
-        <div ref={printRef}>
-          <PrintableForm intake={intake} />
-        </div>
+        <div ref={printRef}><PrintableForm intake={intake} /></div>
       </div>
-
       <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownloadPDF}>
         <FileDown className="w-4 h-4" /> Download PDF
       </Button>
