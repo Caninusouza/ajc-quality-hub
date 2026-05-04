@@ -82,8 +82,8 @@ export default function TaskFormDialog({ open, onOpenChange, onSubmit, initialDa
                   <Input value={FSQA_REPS[form.fsqa_assignee] || ''} disabled className="bg-muted text-muted-foreground cursor-not-allowed opacity-100" placeholder="Auto-populated" />
                 </div>
                 <div>
-                  <Label>Due Date</Label>
-                  <Input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+                  <Label>Due Date *</Label>
+                  <Input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} required />
                 </div>
               </div>
               {projects.length > 0 && (

@@ -103,8 +103,8 @@ export default function ProjectFormDialog({ open, onOpenChange, onSubmit, initia
                   <Input value={FSQA_REPS[form.fsqa_assignee] || ''} disabled className="bg-muted text-muted-foreground cursor-not-allowed opacity-100" placeholder="Auto-populated" />
                 </div>
                 <div className="col-span-2">
-                  <Label>Due Date</Label>
-                  <Input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+                  <Label>Due Date *</Label>
+                  <Input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} required />
                 </div>
               </div>
               <div>
