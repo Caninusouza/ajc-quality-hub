@@ -3,11 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, CheckSquare, LayoutGrid, List, BarChart2 } from 'lucide-react';
+import { Search, CheckSquare, LayoutGrid, List, BarChart2, AlertCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, Paperclip } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isPast, parseISO } from 'date-fns';
+
+const isOverdue = (task) =>
+  task.due_date && task.status !== 'done' && isPast(parseISO(task.due_date + 'T23:59:59'));
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -56,7 +59,13 @@ export default function Tasks() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const { data: tasks = [], isLoading } = useQuery({ queryKey: ['tasks'], queryFn: () => base44.entities.Task.list('-created_date') });
+  const { data: tasks = [], isLoading } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: async () => {
+      const all = await base44.entities.Task.list('-created_date');
+      return all.filter(t => !t.archived);
+    }
+  });
   const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: () => base44.entities.Project.list() });
 
   const createMutation = useMutation({
@@ -144,6 +153,12 @@ export default function Tasks() {
               <div className="flex items-center gap-1.5 shrink-0">
                 <StatusBadge value={task.status} />
                 <StatusBadge value={task.priority} type="priority" />
+                {isOverdue(task) && (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 border border-red-200">
+                    <AlertCircle className="w-2.5 h-2.5" />
+                    Overdue
+                  </span>
+                )}
                 {task.due_date && <span className="text-xs text-muted-foreground hidden sm:inline">{format(new Date(task.due_date), 'MMM d')}</span>}
                 {task.file_attachments?.length > 0 && (
                   <span className="text-[10px] flex items-center gap-0.5 text-muted-foreground">

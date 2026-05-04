@@ -1,10 +1,13 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Clock, User } from 'lucide-react';
+import { Pencil, Trash2, Clock, User, AlertCircle } from 'lucide-react';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { format } from 'date-fns';
+import { format, isPast, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+
+const isOverdue = (task) =>
+  task.due_date && task.status !== 'done' && isPast(parseISO(task.due_date + 'T23:59:59'));
 
 const assigneeCardBg = {
   'Rafael Souza': 'bg-blue-50',
@@ -60,6 +63,12 @@ export default function TaskColumn({ status, tasks, onEdit, onDelete, onStatusCh
             {task.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{task.description}</p>}
             <div className="flex flex-wrap items-center gap-1.5">
               <StatusBadge value={task.priority} type="priority" />
+              {isOverdue(task) && (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 border border-red-200">
+                  <AlertCircle className="w-2.5 h-2.5" />
+                  Overdue
+                </span>
+              )}
               {task.due_date && (
                 <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                   <Clock className="w-3 h-3" />

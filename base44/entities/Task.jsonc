@@ -72,6 +72,16 @@
           }
         }
       }
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when the task was auto-archived at end of week"
+    },
+    "archived_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the task was archived"
     }
   },
   "required": [
