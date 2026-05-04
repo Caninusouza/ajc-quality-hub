@@ -31,28 +31,82 @@
     "product_cut": {
       "type": "string"
     },
-    "packaging_configuration": {
+    "brand_type": {
+      "type": "string",
+      "enum": [
+        "Branded",
+        "Unbranded"
+      ],
+      "description": "Whether the product is branded or unbranded"
+    },
+    "market_channel": {
+      "type": "string",
+      "enum": [
+        "Retail",
+        "Food Service"
+      ],
+      "description": "Retail or Food Service channel"
+    },
+    "primary_packaging_material": {
+      "type": "string",
+      "enum": [
+        "Poly Bag",
+        "Vacuum Bag",
+        "Cryovac",
+        "Tray",
+        "Foam Tray",
+        "Other"
+      ],
+      "description": "Material used for the primary (inner) package"
+    },
+    "primary_packaging_material_other": {
       "type": "string"
     },
-    "package_material": {
+    "primary_packaging_configuration": {
+      "type": "string",
+      "description": "e.g. 10 lb bag, individual piece vacuum"
+    },
+    "primary_packaging_weight": {
+      "type": "string"
+    },
+    "primary_bag_type": {
+      "type": "string",
+      "enum": [
+        "Printed",
+        "Clear Poly",
+        "N/A"
+      ],
+      "description": "If primary packaging is a bag, specify printed or clear poly"
+    },
+    "primary_recyclable": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Partially"
+      ]
+    },
+    "secondary_packaging_material": {
       "type": "string",
       "enum": [
         "Cardboard Box",
         "Poly Bag",
-        "Vacuum Bag",
-        "Tray",
-        "Cryovac",
-        "Foam Tray",
+        "Shrink Wrap",
         "Other"
-      ]
+      ],
+      "description": "Material used for the secondary (outer/case) package"
     },
-    "package_material_other": {
+    "secondary_packaging_material_other": {
       "type": "string"
     },
-    "packaging_weight": {
+    "secondary_packaging_configuration": {
+      "type": "string",
+      "description": "e.g. 4 bags per case, 40 lb case"
+    },
+    "secondary_packaging_weight": {
       "type": "string"
     },
-    "recyclable": {
+    "secondary_recyclable": {
       "type": "string",
       "enum": [
         "Yes",

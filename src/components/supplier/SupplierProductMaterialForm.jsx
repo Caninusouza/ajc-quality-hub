@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import FileAttachments from '@/components/shared/FileAttachments';
 
 const PRODUCT_CATEGORIES = ['Chicken', 'Pork', 'Beef', 'Fish', 'Turkey', 'Vegetables', 'Fruits', 'French Fries', 'Other'];
-const PACKAGE_MATERIALS = ['Cardboard Box', 'Poly Bag', 'Vacuum Bag', 'Tray', 'Cryovac', 'Foam Tray', 'Other'];
+const PRIMARY_MATERIALS = ['Poly Bag', 'Vacuum Bag', 'Cryovac', 'Tray', 'Foam Tray', 'Other'];
+const SECONDARY_MATERIALS = ['Cardboard Box', 'Poly Bag', 'Shrink Wrap', 'Other'];
 
 const defaultForm = () => ({
   supplier_name: '',
@@ -17,16 +18,26 @@ const defaultForm = () => ({
   product_category: '',
   product_category_other: '',
   product_cut: '',
-  packaging_configuration: '',
-  package_material: '',
-  package_material_other: '',
-  packaging_weight: '',
-  recyclable: '',
+  brand_type: '',
+  market_channel: '',
+  primary_packaging_material: '',
+  primary_packaging_material_other: '',
+  primary_packaging_configuration: '',
+  primary_packaging_weight: '',
+  primary_bag_type: '',
+  primary_recyclable: '',
+  secondary_packaging_material: '',
+  secondary_packaging_material_other: '',
+  secondary_packaging_configuration: '',
+  secondary_packaging_weight: '',
+  secondary_recyclable: '',
   palletization_configuration: '',
   status: 'Draft',
   notes: '',
   file_attachments: [],
 });
+
+const isPrimaryBag = (material) => ['Poly Bag', 'Vacuum Bag', 'Cryovac'].includes(material);
 
 export default function SupplierProductMaterialForm({ initialData, onSave, onCancel, isSaving }) {
   const [form, setForm] = useState(initialData || defaultForm());
@@ -44,6 +55,7 @@ export default function SupplierProductMaterialForm({ initialData, onSave, onCan
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+
       {/* Supplier Info */}
       <Card>
         <CardHeader className="pb-3">
@@ -88,39 +100,72 @@ export default function SupplierProductMaterialForm({ initialData, onSave, onCan
             <Label>Product Cut</Label>
             <Input value={form.product_cut} onChange={e => set('product_cut', e.target.value)} placeholder="e.g. Whole, Half, Diced, Sliced..." />
           </div>
+          <div>
+            <Label>Brand / Unbranded</Label>
+            <Select value={form.brand_type} onValueChange={v => set('brand_type', v)}>
+              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Branded">Branded</SelectItem>
+                <SelectItem value="Unbranded">Unbranded</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Market Channel</Label>
+            <Select value={form.market_channel} onValueChange={v => set('market_channel', v)}>
+              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Retail">Retail</SelectItem>
+                <SelectItem value="Food Service">Food Service</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Packaging */}
+      {/* Primary Packaging */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Packaging & Palletization</CardTitle>
+          <CardTitle className="text-base">Primary Packaging <span className="text-xs font-normal text-muted-foreground">(Inner / consumer unit)</span></CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label>Packaging Configuration</Label>
-            <Input value={form.packaging_configuration} onChange={e => set('packaging_configuration', e.target.value)} placeholder="e.g. 4x10 lb bags per case" />
-          </div>
-          <div>
-            <Label>Package Material</Label>
-            <Select value={form.package_material} onValueChange={v => set('package_material', v)}>
+            <Label>Primary Package Material</Label>
+            <Select value={form.primary_packaging_material} onValueChange={v => set('primary_packaging_material', v)}>
               <SelectTrigger><SelectValue placeholder="Select material..." /></SelectTrigger>
-              <SelectContent>{PACKAGE_MATERIALS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+              <SelectContent>{PRIMARY_MATERIALS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          {form.package_material === 'Other' && (
-            <div className="sm:col-span-2">
-              <Label>Package Material (Other)</Label>
-              <Input value={form.package_material_other} onChange={e => set('package_material_other', e.target.value)} placeholder="Specify material..." />
+          {form.primary_packaging_material === 'Other' && (
+            <div>
+              <Label>Primary Material (Other)</Label>
+              <Input value={form.primary_packaging_material_other} onChange={e => set('primary_packaging_material_other', e.target.value)} placeholder="Specify..." />
+            </div>
+          )}
+          {isPrimaryBag(form.primary_packaging_material) && (
+            <div>
+              <Label>Bag Type</Label>
+              <Select value={form.primary_bag_type} onValueChange={v => set('primary_bag_type', v)}>
+                <SelectTrigger><SelectValue placeholder="Select bag type..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Printed">Printed</SelectItem>
+                  <SelectItem value="Clear Poly">Clear Poly</SelectItem>
+                  <SelectItem value="N/A">N/A</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
           <div>
-            <Label>Packaging Weight</Label>
-            <Input value={form.packaging_weight} onChange={e => set('packaging_weight', e.target.value)} placeholder="e.g. 40 lbs / case" />
+            <Label>Primary Configuration</Label>
+            <Input value={form.primary_packaging_configuration} onChange={e => set('primary_packaging_configuration', e.target.value)} placeholder="e.g. 10 lb bag, individual vacuum" />
           </div>
           <div>
-            <Label>Recyclable</Label>
-            <Select value={form.recyclable} onValueChange={v => set('recyclable', v)}>
+            <Label>Primary Weight</Label>
+            <Input value={form.primary_packaging_weight} onChange={e => set('primary_packaging_weight', e.target.value)} placeholder="e.g. 10 lbs" />
+          </div>
+          <div>
+            <Label>Primary Recyclable</Label>
+            <Select value={form.primary_recyclable} onValueChange={v => set('primary_recyclable', v)}>
               <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="Yes">Yes</SelectItem>
@@ -129,10 +174,58 @@ export default function SupplierProductMaterialForm({ initialData, onSave, onCan
               </SelectContent>
             </Select>
           </div>
-          <div className="sm:col-span-2">
-            <Label>Palletization Configuration</Label>
-            <Input value={form.palletization_configuration} onChange={e => set('palletization_configuration', e.target.value)} placeholder="e.g. 50 cases / pallet, 5 layers x 10 cases" />
+        </CardContent>
+      </Card>
+
+      {/* Secondary Packaging */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Secondary Packaging <span className="text-xs font-normal text-muted-foreground">(Outer / case)</span></CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label>Secondary Package Material</Label>
+            <Select value={form.secondary_packaging_material} onValueChange={v => set('secondary_packaging_material', v)}>
+              <SelectTrigger><SelectValue placeholder="Select material..." /></SelectTrigger>
+              <SelectContent>{SECONDARY_MATERIALS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+            </Select>
           </div>
+          {form.secondary_packaging_material === 'Other' && (
+            <div>
+              <Label>Secondary Material (Other)</Label>
+              <Input value={form.secondary_packaging_material_other} onChange={e => set('secondary_packaging_material_other', e.target.value)} placeholder="Specify..." />
+            </div>
+          )}
+          <div>
+            <Label>Secondary Configuration</Label>
+            <Input value={form.secondary_packaging_configuration} onChange={e => set('secondary_packaging_configuration', e.target.value)} placeholder="e.g. 4 bags per case" />
+          </div>
+          <div>
+            <Label>Secondary Weight</Label>
+            <Input value={form.secondary_packaging_weight} onChange={e => set('secondary_packaging_weight', e.target.value)} placeholder="e.g. 40 lbs / case" />
+          </div>
+          <div>
+            <Label>Secondary Recyclable</Label>
+            <Select value={form.secondary_recyclable} onValueChange={v => set('secondary_recyclable', v)}>
+              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Yes">Yes</SelectItem>
+                <SelectItem value="No">No</SelectItem>
+                <SelectItem value="Partially">Partially</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Palletization */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Palletization</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Label>Palletization Configuration</Label>
+          <Input value={form.palletization_configuration} onChange={e => set('palletization_configuration', e.target.value)} placeholder="e.g. 50 cases / pallet, 5 layers x 10 cases" />
         </CardContent>
       </Card>
 
