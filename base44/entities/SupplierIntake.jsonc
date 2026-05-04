@@ -44,6 +44,27 @@
     "product_types_other": {
       "type": "string"
     },
+    "product_production_lines": {
+      "type": "array",
+      "description": "Weekly production volume per product category and cut",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "cut": {
+            "type": "string"
+          },
+          "volume": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "weekly_slaughter": {
       "type": "string",
       "enum": [
@@ -54,9 +75,6 @@
       "default": "N/A"
     },
     "weekly_slaughter_volume": {
-      "type": "string"
-    },
-    "weekly_production_volume": {
       "type": "string"
     },
     "number_of_employees": {

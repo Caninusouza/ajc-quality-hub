@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import {
-  Building2, User, Package, ShieldCheck, Factory, Paperclip, ClipboardList, Upload, X, CheckCircle2
+  Building2, User, Package, ShieldCheck, Factory, Paperclip, ClipboardList, Upload, X, CheckCircle2, Plus, Trash2
 } from 'lucide-react';
 
 const PRODUCT_TYPES = ['Chicken', 'Pork', 'Beef', 'Fish', 'Turkey', 'Vegetables', 'Fruits', 'French Fries', 'Other'];
@@ -115,8 +115,9 @@ export default function SupplierIntakeForm({ initialData, onSave, onCancel }) {
     supplier_address: '', supplier_contact_name: '',
     supplier_contact_email: '', supplier_contact_phone: '',
     product_types: [], product_types_other: '',
+    product_production_lines: [],
     weekly_slaughter: 'N/A', weekly_slaughter_volume: '',
-    weekly_production_volume: '', number_of_employees: '',
+    number_of_employees: '',
     third_party_audit: 'No', third_party_audit_types: [], third_party_audit_other: '', audit_expiry_date: '',
     food_safety_plan: '', gmp_program: '', allergen_program: '',
     pest_control_program: '', water_testing_program: '', traceability_program: '',
@@ -212,12 +213,97 @@ export default function SupplierIntakeForm({ initialData, onSave, onCancel }) {
                 <Input value={form.weekly_slaughter_volume} onChange={e => set('weekly_slaughter_volume', e.target.value)} placeholder="e.g. 50,000 birds" />
               </FieldRow>
             )}
-            <FieldRow label="Weekly Production Volume">
-              <Input value={form.weekly_production_volume} onChange={e => set('weekly_production_volume', e.target.value)} placeholder="e.g. 200,000 lbs" />
-            </FieldRow>
             <FieldRow label="Number of Employees">
               <Input type="number" value={form.number_of_employees} onChange={e => set('number_of_employees', e.target.value)} placeholder="e.g. 450" />
             </FieldRow>
+          </div>
+
+          {/* Product Production Lines */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Weekly Production by Product / Cut</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1.5 text-xs"
+                onClick={() => set('product_production_lines', [...(form.product_production_lines || []), { category: '', cut: '', volume: '', unit: 'lbs' }])}
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Product
+              </Button>
+            </div>
+
+            {(form.product_production_lines || []).length === 0 ? (
+              <p className="text-xs text-muted-foreground italic py-2">No products added yet. Click "Add Product" to specify production volumes per category/cut.</p>
+            ) : (
+              <div className="space-y-2">
+                {/* Header */}
+                <div className="grid grid-cols-[1fr_1fr_120px_80px_36px] gap-2 px-1">
+                  <span className="text-xs font-medium text-muted-foreground">Category</span>
+                  <span className="text-xs font-medium text-muted-foreground">Cut / SKU</span>
+                  <span className="text-xs font-medium text-muted-foreground">Weekly Volume</span>
+                  <span className="text-xs font-medium text-muted-foreground">Unit</span>
+                  <span />
+                </div>
+                {(form.product_production_lines || []).map((line, idx) => (
+                  <div key={idx} className="grid grid-cols-[1fr_1fr_120px_80px_36px] gap-2 items-center bg-muted/30 rounded-lg p-2 border">
+                    <Select
+                      value={line.category}
+                      onValueChange={val => {
+                        const lines = [...(form.product_production_lines || [])];
+                        lines[idx] = { ...lines[idx], category: val };
+                        set('product_production_lines', lines);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Category..." /></SelectTrigger>
+                      <SelectContent>
+                        {PRODUCT_TYPES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      className="h-8 text-xs"
+                      value={line.cut}
+                      onChange={e => {
+                        const lines = [...(form.product_production_lines || [])];
+                        lines[idx] = { ...lines[idx], cut: e.target.value };
+                        set('product_production_lines', lines);
+                      }}
+                      placeholder="e.g. Boneless Breast"
+                    />
+                    <Input
+                      className="h-8 text-xs"
+                      value={line.volume}
+                      onChange={e => {
+                        const lines = [...(form.product_production_lines || [])];
+                        lines[idx] = { ...lines[idx], volume: e.target.value };
+                        set('product_production_lines', lines);
+                      }}
+                      placeholder="e.g. 50,000"
+                    />
+                    <Select
+                      value={line.unit}
+                      onValueChange={val => {
+                        const lines = [...(form.product_production_lines || [])];
+                        lines[idx] = { ...lines[idx], unit: val };
+                        set('product_production_lines', lines);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {['lbs', 'kg', 'cases', 'units', 'birds', 'heads'].map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <button
+                      type="button"
+                      onClick={() => set('product_production_lines', (form.product_production_lines || []).filter((_, i) => i !== idx))}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
