@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { Search, Building2, Calendar, User, ChevronRight, Eye, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import SupplierIntakePDFButtons from '@/components/supplier/SupplierIntakePDF';
+import UploadFilledForm from '@/components/supplier/UploadFilledForm';
 
 const STATUS_STYLES = {
   Draft: 'bg-gray-100 text-gray-600 border-gray-200',
@@ -79,7 +80,9 @@ export default function SupplierIntakes() {
         subtitle="Supplier visit assessments and plant inspections"
         actionLabel="New Intake"
         onAction={() => { setEditing(null); setView('form'); }}
-      />
+      >
+        <UploadFilledForm onExtracted={(data) => { setEditing(data); setView('form'); }} />
+      </PageHeader>
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
