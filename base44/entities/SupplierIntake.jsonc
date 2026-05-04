@@ -1,0 +1,272 @@
+{
+  "name": "SupplierIntake",
+  "type": "object",
+  "properties": {
+    "supplier_name": {
+      "type": "string"
+    },
+    "visit_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "visited_by": {
+      "type": "string"
+    },
+    "supplier_address": {
+      "type": "string"
+    },
+    "supplier_contact_name": {
+      "type": "string"
+    },
+    "supplier_contact_email": {
+      "type": "string"
+    },
+    "supplier_contact_phone": {
+      "type": "string"
+    },
+    "product_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Chicken",
+          "Pork",
+          "Beef",
+          "Fish",
+          "Turkey",
+          "Vegetables",
+          "Fruits",
+          "French Fries",
+          "Other"
+        ]
+      }
+    },
+    "product_types_other": {
+      "type": "string"
+    },
+    "weekly_slaughter": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "N/A"
+      ],
+      "default": "N/A"
+    },
+    "weekly_slaughter_volume": {
+      "type": "string"
+    },
+    "weekly_production_volume": {
+      "type": "string"
+    },
+    "number_of_employees": {
+      "type": "number"
+    },
+    "third_party_audit": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No"
+      ],
+      "default": "No"
+    },
+    "third_party_audit_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "SQF",
+          "BRC",
+          "FSSC 22000",
+          "IFS",
+          "GLOBALG.A.P.",
+          "Primus GFS",
+          "Costco",
+          "Other"
+        ]
+      }
+    },
+    "third_party_audit_other": {
+      "type": "string"
+    },
+    "audit_expiry_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "food_safety_plan": {
+      "type": "string",
+      "enum": [
+        "HACCP",
+        "HARPC",
+        "Both",
+        "None"
+      ]
+    },
+    "gmp_program": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No"
+      ]
+    },
+    "allergen_program": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No"
+      ]
+    },
+    "pest_control_program": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No"
+      ]
+    },
+    "water_testing_program": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No"
+      ]
+    },
+    "traceability_program": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No"
+      ]
+    },
+    "plant_inspection_conducted": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No"
+      ],
+      "default": "No"
+    },
+    "inspection_exterior": {
+      "type": "string",
+      "enum": [
+        "Satisfactory",
+        "Needs Improvement",
+        "Unsatisfactory",
+        "N/A"
+      ]
+    },
+    "inspection_receiving": {
+      "type": "string",
+      "enum": [
+        "Satisfactory",
+        "Needs Improvement",
+        "Unsatisfactory",
+        "N/A"
+      ]
+    },
+    "inspection_storage": {
+      "type": "string",
+      "enum": [
+        "Satisfactory",
+        "Needs Improvement",
+        "Unsatisfactory",
+        "N/A"
+      ]
+    },
+    "inspection_processing": {
+      "type": "string",
+      "enum": [
+        "Satisfactory",
+        "Needs Improvement",
+        "Unsatisfactory",
+        "N/A"
+      ]
+    },
+    "inspection_sanitation": {
+      "type": "string",
+      "enum": [
+        "Satisfactory",
+        "Needs Improvement",
+        "Unsatisfactory",
+        "N/A"
+      ]
+    },
+    "inspection_employee_hygiene": {
+      "type": "string",
+      "enum": [
+        "Satisfactory",
+        "Needs Improvement",
+        "Unsatisfactory",
+        "N/A"
+      ]
+    },
+    "inspection_pest_control": {
+      "type": "string",
+      "enum": [
+        "Satisfactory",
+        "Needs Improvement",
+        "Unsatisfactory",
+        "N/A"
+      ]
+    },
+    "inspection_temperature_control": {
+      "type": "string",
+      "enum": [
+        "Satisfactory",
+        "Needs Improvement",
+        "Unsatisfactory",
+        "N/A"
+      ]
+    },
+    "inspection_labeling": {
+      "type": "string",
+      "enum": [
+        "Satisfactory",
+        "Needs Improvement",
+        "Unsatisfactory",
+        "N/A"
+      ]
+    },
+    "inspection_overall_rating": {
+      "type": "string",
+      "enum": [
+        "Pass",
+        "Conditional Pass",
+        "Fail"
+      ]
+    },
+    "inspection_notes": {
+      "type": "string"
+    },
+    "general_notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Submitted",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Draft"
+    },
+    "file_attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "supplier_name",
+    "visit_date"
+  ]
+}
