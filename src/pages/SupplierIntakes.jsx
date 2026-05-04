@@ -10,6 +10,7 @@ import SupplierIntakeForm from '@/components/supplier/SupplierIntakeForm';
 import { format } from 'date-fns';
 import { Search, Building2, Calendar, User, ChevronRight, Eye, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import SupplierIntakePDFButtons from '@/components/supplier/SupplierIntakePDF';
 
 const STATUS_STYLES = {
   Draft: 'bg-gray-100 text-gray-600 border-gray-200',
@@ -59,7 +60,9 @@ export default function SupplierIntakes() {
         <PageHeader
           title={editing?.id ? 'Edit Supplier Intake' : 'New Supplier Intake'}
           subtitle={editing?.id ? `Editing: ${editing.supplier_name}` : 'Fill out the supplier visit and assessment form'}
-        />
+        >
+          <SupplierIntakePDFButtons intake={editing || {}} />
+        </PageHeader>
         <SupplierIntakeForm
           initialData={editing}
           onSave={(data) => saveMutation.mutateAsync(data)}
@@ -138,6 +141,7 @@ export default function SupplierIntakes() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    <SupplierIntakePDFButtons intake={intake} />
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditing(intake); setView('form'); }}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
