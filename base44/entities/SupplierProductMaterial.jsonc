@@ -1,0 +1,98 @@
+{
+  "name": "SupplierProductMaterial",
+  "type": "object",
+  "properties": {
+    "supplier_name": {
+      "type": "string"
+    },
+    "plant_number": {
+      "type": "string"
+    },
+    "product_name": {
+      "type": "string"
+    },
+    "product_category": {
+      "type": "string",
+      "enum": [
+        "Chicken",
+        "Pork",
+        "Beef",
+        "Fish",
+        "Turkey",
+        "Vegetables",
+        "Fruits",
+        "French Fries",
+        "Other"
+      ]
+    },
+    "product_category_other": {
+      "type": "string"
+    },
+    "product_cut": {
+      "type": "string"
+    },
+    "packaging_configuration": {
+      "type": "string"
+    },
+    "package_material": {
+      "type": "string",
+      "enum": [
+        "Cardboard Box",
+        "Poly Bag",
+        "Vacuum Bag",
+        "Tray",
+        "Cryovac",
+        "Foam Tray",
+        "Other"
+      ]
+    },
+    "package_material_other": {
+      "type": "string"
+    },
+    "packaging_weight": {
+      "type": "string"
+    },
+    "recyclable": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Partially"
+      ]
+    },
+    "palletization_configuration": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Submitted",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Draft"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "file_attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "supplier_name",
+    "product_name"
+  ]
+}

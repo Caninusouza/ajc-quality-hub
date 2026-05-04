@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShieldAlert, FolderKanban, CheckSquare, Menu, X, ChevronRight, CalendarDays, InboxIcon, FileWarning, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, ShieldAlert, FolderKanban, CheckSquare, Menu, X, ChevronRight, CalendarDays, InboxIcon, FileWarning, ClipboardCheck, PackageSearch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,6 +13,7 @@ const navItems = [
   { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
   { label: 'Requests', icon: InboxIcon, path: '/requests' },
   { label: 'Supplier Intakes', icon: ClipboardCheck, path: '/supplier-intakes' },
+  { label: 'Product Materials', icon: PackageSearch, path: '/supplier-product-materials' },
 ];
 
 export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) {

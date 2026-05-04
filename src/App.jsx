@@ -16,6 +16,7 @@ import MyRequests from '@/pages/MyRequests';
 import ClaimFormPortal from '@/pages/ClaimFormPortal';
 import ClaimForms from '@/pages/ClaimForms';
 import SupplierIntakes from '@/pages/SupplierIntakes';
+import SupplierProductMaterials from '@/pages/SupplierProductMaterials';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -51,6 +52,7 @@ const AuthenticatedApp = () => {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/requests" element={<Requests />} />
         <Route path="/supplier-intakes" element={<SupplierIntakes />} />
+        <Route path="/supplier-product-materials" element={<SupplierProductMaterials />} />
         <Route path="/claim-forms" element={<ClaimForms />} />
       </Route>
       <Route path="/my-requests" element={<MyRequests />} />
