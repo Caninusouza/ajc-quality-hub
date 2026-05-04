@@ -172,6 +172,9 @@
         "N/A"
       ]
     },
+    "inspection_exterior_comment": {
+      "type": "string"
+    },
     "inspection_receiving": {
       "type": "string",
       "enum": [
@@ -180,6 +183,9 @@
         "Unsatisfactory",
         "N/A"
       ]
+    },
+    "inspection_receiving_comment": {
+      "type": "string"
     },
     "inspection_storage": {
       "type": "string",
@@ -190,6 +196,9 @@
         "N/A"
       ]
     },
+    "inspection_storage_comment": {
+      "type": "string"
+    },
     "inspection_processing": {
       "type": "string",
       "enum": [
@@ -198,6 +207,9 @@
         "Unsatisfactory",
         "N/A"
       ]
+    },
+    "inspection_processing_comment": {
+      "type": "string"
     },
     "inspection_sanitation": {
       "type": "string",
@@ -208,6 +220,9 @@
         "N/A"
       ]
     },
+    "inspection_sanitation_comment": {
+      "type": "string"
+    },
     "inspection_employee_hygiene": {
       "type": "string",
       "enum": [
@@ -216,6 +231,9 @@
         "Unsatisfactory",
         "N/A"
       ]
+    },
+    "inspection_employee_hygiene_comment": {
+      "type": "string"
     },
     "inspection_pest_control": {
       "type": "string",
@@ -226,6 +244,9 @@
         "N/A"
       ]
     },
+    "inspection_pest_control_comment": {
+      "type": "string"
+    },
     "inspection_temperature_control": {
       "type": "string",
       "enum": [
@@ -235,6 +256,9 @@
         "N/A"
       ]
     },
+    "inspection_temperature_control_comment": {
+      "type": "string"
+    },
     "inspection_labeling": {
       "type": "string",
       "enum": [
@@ -243,6 +267,9 @@
         "Unsatisfactory",
         "N/A"
       ]
+    },
+    "inspection_labeling_comment": {
+      "type": "string"
     },
     "inspection_overall_rating": {
       "type": "string",

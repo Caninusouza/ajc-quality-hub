@@ -370,27 +370,39 @@ export default function SupplierIntakeForm({ initialData, onSave, onCancel }) {
           <CardContent className="space-y-5">
             <Separator />
             <p className="text-sm text-muted-foreground">Rate each area observed during the walk-through:</p>
-            <div className="space-y-3">
+            <div className="space-y-1">
               {INSPECTION_AREAS.map(({ key, label }) => (
-                <div key={key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 border-b last:border-0">
-                  <span className="text-sm font-medium min-w-[220px]">{label}</span>
-                  <div className="flex flex-wrap gap-2">
-                    {RATING_OPTIONS.map(opt => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => set(key, opt)}
-                        className={cn(
-                          "px-3 py-1 rounded-md text-xs font-medium border transition-all",
-                          form[key] === opt
-                            ? RATING_COLORS[opt]
-                            : "bg-background border-border text-muted-foreground hover:border-primary/40"
-                        )}
-                      >
-                        {opt}
-                      </button>
-                    ))}
+                <div key={key} className="py-2 border-b last:border-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span className="text-sm font-medium min-w-[220px]">{label}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {RATING_OPTIONS.map(opt => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => set(key, opt)}
+                          className={cn(
+                            "px-3 py-1 rounded-md text-xs font-medium border transition-all",
+                            form[key] === opt
+                              ? RATING_COLORS[opt]
+                              : "bg-background border-border text-muted-foreground hover:border-primary/40"
+                          )}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                  {form[key] && form[key] !== 'N/A' && (
+                    <div className="mt-2 ml-0 sm:ml-[220px]">
+                      <Textarea
+                        value={form[`${key}_comment`] || ''}
+                        onChange={e => set(`${key}_comment`, e.target.value)}
+                        placeholder={`Comment on ${label.toLowerCase()}...`}
+                        className="min-h-[60px] text-xs"
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
