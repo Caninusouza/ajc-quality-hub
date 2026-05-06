@@ -189,7 +189,24 @@ function Field({ label, children }) {
 }
 
 export default function ProductEvaluationForm({ initialData, onSave, onCancel, isSaving }) {
-  const [form, setForm] = useState({ ...DEFAULT, ...initialData });
+  // Persist form state in sessionStorage so mobile camera focus-loss doesn't wipe it
+  const storageKey = 'pe_form_draft';
+  const [form, setFormState] = useState(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
+      // Only restore if it matches the same record (same id or both new)
+      if (saved && (saved.id || '') === (initialData?.id || '')) return { ...DEFAULT, ...initialData, ...saved };
+    } catch {}
+    return { ...DEFAULT, ...initialData };
+  });
+
+  const setForm = (updater) => {
+    setFormState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      sessionStorage.setItem(storageKey, JSON.stringify(next));
+      return next;
+    });
+  };
 
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
   const setVal = (key, val) => setForm(f => ({ ...f, [key]: val }));
@@ -203,12 +220,17 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
       ...form,
       product_photos: (form.product_photos || []).filter(p => p.url),
       weekly_slaughter: isAnimalProtein ? form.weekly_slaughter : '',
-      // Store only filled numeric weights; clear if category doesn't have grid
       piece_weights: hasWeightGrid
         ? (form.piece_weights || []).map(v => parseFloat(v) || null)
         : [],
     };
+    sessionStorage.removeItem(storageKey);
     onSave(cleaned);
+  };
+
+  const handleCancel = () => {
+    sessionStorage.removeItem(storageKey);
+    onCancel();
   };
 
   return (
@@ -306,7 +328,7 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={handleCancel}>Cancel</Button>
         <Button type="submit" disabled={isSaving}>
           {isSaving ? 'Saving...' : 'Save & Preview'}
         </Button>

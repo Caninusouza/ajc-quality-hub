@@ -20,8 +20,14 @@ const STATUS_STYLES = {
 export default function ProductEvaluations() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
-  const [view, setView] = useState('list'); // 'list' | 'form'
-  const [editing, setEditing] = useState(null);
+  // Use sessionStorage to persist view/editing across mobile camera focus loss
+  const [view, setViewState] = useState(() => sessionStorage.getItem('pe_view') || 'list');
+  const [editing, setEditingState] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('pe_editing') || 'null'); } catch { return null; }
+  });
+
+  const setView = (v) => { sessionStorage.setItem('pe_view', v); setViewState(v); };
+  const setEditing = (e) => { sessionStorage.setItem('pe_editing', JSON.stringify(e)); setEditingState(e); };
 
   const { data: evaluations = [], isLoading } = useQuery({
     queryKey: ['product_evaluations'],
@@ -85,7 +91,7 @@ export default function ProductEvaluations() {
         <ProductEvaluationForm
           initialData={editing || {}}
           onSave={(data) => saveMutation.mutateAsync(data)}
-          onCancel={() => { setView('list'); setEditing(null); }}
+          onCancel={() => { setView('list'); setEditing(null); sessionStorage.removeItem('pe_view'); sessionStorage.removeItem('pe_editing'); }}
           isSaving={saveMutation.isPending}
         />
       </div>
@@ -101,7 +107,7 @@ export default function ProductEvaluations() {
         />
         <div className="flex gap-3 mb-4">
           <Button variant="outline" onClick={() => { setView('form'); }}>Edit</Button>
-          <Button variant="outline" onClick={() => { setView('list'); setEditing(null); }}>Back to List</Button>
+          <Button variant="outline" onClick={() => { setView('list'); setEditing(null); sessionStorage.removeItem('pe_view'); sessionStorage.removeItem('pe_editing'); }}>Back to List</Button>
           <ProductEvaluationPDF evaluation={editing} />
         </div>
         <EvaluationPreview evaluation={editing} />
