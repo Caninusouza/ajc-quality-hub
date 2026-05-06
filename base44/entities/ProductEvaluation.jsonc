@@ -101,6 +101,23 @@
           },
           "caption": {
             "type": "string"
+          },
+          "transforms": {
+            "type": "object",
+            "properties": {
+              "rotation": {
+                "type": "number"
+              },
+              "flipH": {
+                "type": "boolean"
+              },
+              "offsetX": {
+                "type": "number"
+              },
+              "offsetY": {
+                "type": "number"
+              }
+            }
           }
         }
       }
