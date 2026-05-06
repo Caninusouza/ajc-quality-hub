@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { base44 } from '@/api/base44Client';
 import { X, ImageIcon, Camera } from 'lucide-react';
 import USCityAutocomplete from '@/components/shared/USCityAutocomplete';
+import WeightGrid from '@/components/product-evaluation/WeightGrid';
 
 const DEFAULT = {
   date: '', supplier_name: '', product_name: '',
@@ -17,7 +18,10 @@ const DEFAULT = {
   weekly_slaughter: '', pack_date: '', shelf_life: '',
   notes_comments: '', grading_profile: '',
   label_photos: [], product_photos: [], grading_photos: [],
+  piece_weights: [],
 };
+
+const WEIGHT_GRID_CATEGORIES = ['Chicken', 'Pork'];
 
 const CATEGORIES = ['Chicken', 'Turkey', 'Pork', 'Beef', 'Lamb', 'Fish/Seafood', 'Vegetables', 'Fruits', 'French Fries', 'Other'];
 const ANIMAL_PROTEINS = ['Chicken', 'Turkey', 'Pork', 'Beef', 'Lamb', 'Fish/Seafood'];
@@ -191,14 +195,18 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
   const setVal = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
   const isAnimalProtein = ANIMAL_PROTEINS.includes(form.product_category);
+  const hasWeightGrid = WEIGHT_GRID_CATEGORIES.includes(form.product_category);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const cleaned = {
       ...form,
       product_photos: (form.product_photos || []).filter(p => p.url),
-      // Clear weekly_slaughter if not animal protein
       weekly_slaughter: isAnimalProtein ? form.weekly_slaughter : '',
+      // Store only filled numeric weights; clear if category doesn't have grid
+      piece_weights: hasWeightGrid
+        ? (form.piece_weights || []).map(v => parseFloat(v) || null)
+        : [],
     };
     onSave(cleaned);
   };
@@ -272,6 +280,20 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
           <PhotoUploader label="Grading Photos" photos={form.grading_photos} onChange={v => setVal('grading_photos', v)} />
         </div>
       </div>
+
+      {/* Piece Weights */}
+      {hasWeightGrid && (
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-wide text-primary border-b pb-1 mb-3">
+            Piece Weights — {form.product_category} ({form.product_category === 'Chicken' ? 50 : 30} pieces)
+          </h3>
+          <WeightGrid
+            category={form.product_category}
+            weights={form.piece_weights}
+            onChange={v => setVal('piece_weights', v)}
+          />
+        </div>
+      )}
 
       {/* Product Photos */}
       <div>

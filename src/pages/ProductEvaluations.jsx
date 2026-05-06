@@ -308,7 +308,44 @@ function EvaluationPreview({ evaluation }) {
         </div>
       )}
       <PhotoSection title="Grading Photos" photos={evaluation.grading_photos} />
+      <WeightSummary evaluation={evaluation} />
       <PhotoSection title="Product Photos" photos={evaluation.product_photos} />
+    </div>
+  );
+}
+
+function WeightSummary({ evaluation }) {
+  const weights = (evaluation.piece_weights || []).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
+  if (weights.length === 0) return null;
+  const avg = (weights.reduce((s, v) => s + v, 0) / weights.length).toFixed(1);
+  const min = Math.min(...weights).toFixed(1);
+  const max = Math.max(...weights).toFixed(1);
+  const expectedCount = evaluation.product_category === 'Chicken' ? 50 : evaluation.product_category === 'Pork' ? 30 : null;
+  return (
+    <div className="rounded-xl border p-4">
+      <h3 className="text-xs font-bold uppercase tracking-wide text-primary mb-3">Piece Weights — {evaluation.product_category}</h3>
+      <div className="flex flex-wrap gap-6 mb-4">
+        <div className="text-center">
+          <p className="text-2xl font-bold text-primary">{avg} g</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Average Weight</p>
+        </div>
+        <div className="text-center">
+          <p className="text-2xl font-bold text-foreground">{min} g – {max} g</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Weight Range (Lightest – Heaviest)</p>
+        </div>
+        <div className="text-center">
+          <p className="text-2xl font-bold text-foreground">{weights.length}{expectedCount ? `/${expectedCount}` : ''}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Pieces Recorded</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-10 gap-1">
+        {weights.map((w, i) => (
+          <div key={i} className="text-center">
+            <span className="text-xs text-muted-foreground block">{i + 1}</span>
+            <span className="text-xs font-mono bg-muted/50 rounded px-1 py-0.5 block">{w}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

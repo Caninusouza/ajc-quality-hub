@@ -67,6 +67,13 @@
     "grading_profile": {
       "type": "string"
     },
+    "piece_weights": {
+      "type": "array",
+      "description": "Individual piece weights in grams (50 for Chicken, 30 for Pork)",
+      "items": {
+        "type": "number"
+      }
+    },
     "label_photos": {
       "type": "array",
       "items": {
