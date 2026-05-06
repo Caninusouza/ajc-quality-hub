@@ -362,16 +362,23 @@ async function generatePDF(evaluation) {
 
       if (processed.length === 0) continue;
 
-      // Calculate total height for all photos in batch
-      const totalH = processed.reduce((sum, p) => sum + p.pH + p.captionH + 8, 0);
+      // Calculate total height for all photos - scale down to fit 2 per page
+      const maxPhotoW = contentW * 0.65;
+      const scaledPhotos = processed.map(p => {
+        const scaledH = maxPhotoW * (p.h / p.w);
+        return { ...p, pH: scaledH };
+      });
+      
+      const totalH = scaledPhotos.reduce((sum, p) => sum + p.pH + p.captionH + 8, 0);
       currentY = ensureSpace(totalH + 4, currentY);
 
       // Stack photos vertically
-      processed.forEach((p) => {
+      scaledPhotos.forEach((p) => {
         doc.setDrawColor(200, 208, 220);
         doc.setLineWidth(0.3);
-        doc.rect(margin, currentY, contentW, p.pH);
-        doc.addImage(p.dataUrl, 'JPEG', margin, currentY, contentW, p.pH);
+        const photoX = margin + (contentW - maxPhotoW) / 2;
+        doc.rect(photoX, currentY, maxPhotoW, p.pH);
+        doc.addImage(p.dataUrl, 'JPEG', photoX, currentY, maxPhotoW, p.pH);
         currentY += p.pH;
 
         if (p.caption) {
