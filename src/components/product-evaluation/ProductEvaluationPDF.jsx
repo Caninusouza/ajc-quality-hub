@@ -365,7 +365,7 @@ async function generatePDF(evaluation) {
       // Calculate available space on current page
       const availableSpace = SAFE_BOTTOM - currentY;
       
-      // Estimate photo sizes - start with 65% width
+      // Start with 65% width
       let maxPhotoW = contentW * 0.65;
       let scaledPhotos = processed.map(p => {
         const scaledH = maxPhotoW * (p.h / p.w);
@@ -374,22 +374,19 @@ async function generatePDF(evaluation) {
       
       let totalH = scaledPhotos.reduce((sum, p) => sum + p.pH + p.captionH + 8, 0);
       
-      // If photos fit in available space with room to spare, scale them up to use space better
-      if (availableSpace > totalH + 10 && availableSpace < SAFE_BOTTOM - (HEADER_H + 20)) {
-        const spaceToFill = availableSpace - 10;
-        const scale = spaceToFill / totalH;
-        if (scale > 1 && scale < 1.5) { // Limit scaling to reasonable amounts
-          maxPhotoW = maxPhotoW * scale;
+      // If photos fit with space left, scale up to fill the gap
+      if (totalH + 10 < availableSpace) {
+        const targetScale = (availableSpace - 10) / totalH;
+        if (targetScale > 1 && targetScale < 1.8) {
+          maxPhotoW = maxPhotoW * targetScale;
           scaledPhotos = processed.map(p => {
             const scaledH = maxPhotoW * (p.h / p.w);
             return { ...p, pH: scaledH };
           });
           totalH = scaledPhotos.reduce((sum, p) => sum + p.pH + p.captionH + 8, 0);
         }
-      }
-      
-      // If total height exceeds available space, move to new page
-      if (totalH + 4 > availableSpace) {
+      } else if (totalH + 10 > availableSpace) {
+        // Doesn't fit - move to new page
         currentY = addPage();
       }
 
