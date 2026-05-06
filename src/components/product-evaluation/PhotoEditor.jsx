@@ -1,16 +1,26 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RotateCw, FlipHorizontal, X } from 'lucide-react';
 
 export default function PhotoEditor({ isOpen, onClose, photo, onSave }) {
-  const [rotation, setRotation] = useState(() => photo?.transforms?.rotation || 0);
-  const [flipH, setFlipH] = useState(() => photo?.transforms?.flipH || false);
-  const [offsetX, setOffsetX] = useState(() => photo?.transforms?.offsetX || 0);
-  const [offsetY, setOffsetY] = useState(() => photo?.transforms?.offsetY || 0);
+  const [rotation, setRotation] = useState(0);
+  const [flipH, setFlipH] = useState(false);
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const canvasRef = useRef(null);
+
+  // Sync state when photo changes
+  useEffect(() => {
+    if (isOpen && photo?.url) {
+      setRotation(photo?.transforms?.rotation || 0);
+      setFlipH(photo?.transforms?.flipH || false);
+      setOffsetX(photo?.transforms?.offsetX || 0);
+      setOffsetY(photo?.transforms?.offsetY || 0);
+    }
+  }, [photo?.url, isOpen]);
 
   if (!isOpen || !photo?.url) return null;
 
