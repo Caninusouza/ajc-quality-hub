@@ -362,15 +362,36 @@ async function generatePDF(evaluation) {
 
       if (processed.length === 0) continue;
 
-      // Calculate total height for all photos - scale down to fit 2 per page
-      const maxPhotoW = contentW * 0.65;
-      const scaledPhotos = processed.map(p => {
+      // Calculate available space on current page
+      const availableSpace = SAFE_BOTTOM - currentY;
+      
+      // Estimate photo sizes - start with 65% width
+      let maxPhotoW = contentW * 0.65;
+      let scaledPhotos = processed.map(p => {
         const scaledH = maxPhotoW * (p.h / p.w);
         return { ...p, pH: scaledH };
       });
       
-      const totalH = scaledPhotos.reduce((sum, p) => sum + p.pH + p.captionH + 8, 0);
-      currentY = ensureSpace(totalH + 4, currentY);
+      let totalH = scaledPhotos.reduce((sum, p) => sum + p.pH + p.captionH + 8, 0);
+      
+      // If photos fit in available space with room to spare, scale them up to use space better
+      if (availableSpace > totalH + 10 && availableSpace < SAFE_BOTTOM - (HEADER_H + 20)) {
+        const spaceToFill = availableSpace - 10;
+        const scale = spaceToFill / totalH;
+        if (scale > 1 && scale < 1.5) { // Limit scaling to reasonable amounts
+          maxPhotoW = maxPhotoW * scale;
+          scaledPhotos = processed.map(p => {
+            const scaledH = maxPhotoW * (p.h / p.w);
+            return { ...p, pH: scaledH };
+          });
+          totalH = scaledPhotos.reduce((sum, p) => sum + p.pH + p.captionH + 8, 0);
+        }
+      }
+      
+      // If total height exceeds available space, move to new page
+      if (totalH + 4 > availableSpace) {
+        currentY = addPage();
+      }
 
       // Stack photos vertically
       scaledPhotos.forEach((p) => {
