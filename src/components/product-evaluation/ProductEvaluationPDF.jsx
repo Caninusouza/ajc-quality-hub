@@ -242,13 +242,48 @@ async function generatePDF(evaluation) {
     const result = await loadImageAsDataURL(photo.url);
     if (!result) return currentY;
     const { dataUrl, w, h } = result;
+    
+    // Apply photo transforms (rotation, flip) to canvas before adding to PDF
+    let finalDataUrl = dataUrl;
+    if (photo.transforms) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const transformedDataUrl = await new Promise((resolve) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const rotation = (photo.transforms.rotation || 0) % 360;
+          const flipH = photo.transforms.flipH || false;
+          
+          // Set canvas size based on rotation
+          if (rotation === 90 || rotation === 270) {
+            canvas.width = img.height;
+            canvas.height = img.width;
+          } else {
+            canvas.width = img.width;
+            canvas.height = img.height;
+          }
+          
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          if (flipH) ctx.scale(-1, 1);
+          ctx.rotate((rotation * Math.PI) / 180);
+          ctx.drawImage(img, -img.width / 2, -img.height / 2);
+          
+          resolve(canvas.toDataURL('image/jpeg', 0.88));
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+      });
+      finalDataUrl = transformedDataUrl;
+    }
+    
     const aspect = h / w;
     const imgW = Math.min(PHOTO_W, contentW); // 127mm or page width
     const imgH = imgW * aspect;
 
-    // Check if it fits on current page (image + optional caption)
-    const captionH = photo.caption ? 8 : 0;
-    const neededH = imgH + captionH + 4;
+    // Check if it fits on current page (image + optional caption with extra space)
+    const captionH = photo.caption ? 12 : 0;
+    const neededH = imgH + captionH + 6;
     currentY = ensureSpace(neededH, currentY);
 
     // Center horizontally
@@ -258,19 +293,22 @@ async function generatePDF(evaluation) {
     doc.setDrawColor(200, 208, 220);
     doc.setLineWidth(0.3);
     doc.rect(x, currentY, imgW, imgH);
-    doc.addImage(dataUrl, 'JPEG', x, currentY, imgW, imgH);
-    currentY += imgH + 2;
+    doc.addImage(finalDataUrl, 'JPEG', x, currentY, imgW, imgH);
+    currentY += imgH + 4;
 
     // Caption
     if (photo.caption) {
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(10);
-      doc.setTextColor(...mutedText);
-      doc.text(photo.caption, pageW / 2, currentY, { align: 'center' });
-      currentY += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...darkText);
+      const captionLines = doc.splitTextToSize(photo.caption, contentW - 4);
+      captionLines.forEach((line, i) => {
+        doc.text(line, pageW / 2, currentY + (i * 4.5), { align: 'center' });
+      });
+      currentY += captionLines.length * 4.5 + 3;
     }
 
-    return currentY + 4;
+    return currentY + 3;
   };
 
   // ── PRODUCT LABEL ──
