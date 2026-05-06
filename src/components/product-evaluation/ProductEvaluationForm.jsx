@@ -193,13 +193,18 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Get actual count of entered weights
+    const weights = (form.piece_weights || []).map(v => parseFloat(v) || null).filter(v => v !== null && v > 0);
+    const actualCount = weights.length;
+    
     const cleaned = {
       ...form,
       product_photos: (form.product_photos || []).filter(p => p.url),
       weekly_slaughter: isAnimalProtein ? form.weekly_slaughter : '',
-      piece_weights: hasWeightGrid
-        ? (form.piece_weights || []).map(v => parseFloat(v) || null)
-        : [],
+      piece_weights: hasWeightGrid ? weights : [],
+      // Store actual count so display shows "X/X" instead of "X/50" or "X/30"
+      _actual_piece_count: hasWeightGrid && actualCount > 0 ? actualCount : undefined,
     };
     try {
       await onSave(cleaned);

@@ -326,7 +326,8 @@ function WeightSummary({ evaluation }) {
   const avg = (weights.reduce((s, v) => s + v, 0) / weights.length).toFixed(1);
   const min = Math.min(...weights).toFixed(1);
   const max = Math.max(...weights).toFixed(1);
-  const expectedCount = evaluation.product_category === 'Chicken' ? 50 : evaluation.product_category === 'Pork' ? 30 : null;
+  // Use actual count from save, or expected count if not specified
+  const displayCount = evaluation._actual_piece_count || weights.length;
   return (
     <div className="rounded-xl border p-4">
       <h3 className="text-xs font-bold uppercase tracking-wide text-primary mb-3">Piece Weights — {evaluation.product_category}</h3>
@@ -340,7 +341,7 @@ function WeightSummary({ evaluation }) {
           <p className="text-xs text-muted-foreground mt-0.5">Weight Range (Lightest – Heaviest)</p>
         </div>
         <div className="text-center">
-          <p className="text-2xl font-bold text-foreground">{weights.length}{expectedCount ? `/${expectedCount}` : ''}</p>
+          <p className="text-2xl font-bold text-foreground">{weights.length}/{displayCount}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Pieces Recorded</p>
         </div>
       </div>
