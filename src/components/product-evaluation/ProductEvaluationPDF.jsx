@@ -305,103 +305,94 @@ async function generatePDF(evaluation) {
     return currentY + 3;
   };
 
-  // ── MULTI-PHOTO section (flexible per row) ──
-  const addPhotoGrid = async (photos, currentY, maxPerRow = 2) => {
+  // ── MULTI-PHOTO section (max 2 per page, no overlaps) ──
+  const addPhotoGrid = async (photos, currentY, maxPerPage = 2) => {
     if (!photos?.length) return currentY;
-    const photoW = (contentW - (maxPerRow - 1) * 3) / maxPerRow;
-    let row = [];
+    
+    let photoIdx = 0;
+    while (photoIdx < photos.length) {
+      const batchPhotos = [];
+      const batchSize = Math.min(maxPerPage, photos.length - photoIdx);
+      
+      for (let i = 0; i < batchSize; i++) {
+        batchPhotos.push(photos[photoIdx + i]);
+      }
+      photoIdx += batchSize;
+      
+      const photoW = (contentW - (batchSize - 1) * 3) / batchSize;
+      const processed = [];
 
-    for (const photo of photos) {
-      const result = await loadImageAsDataURL(photo.url);
-      if (!result) continue;
+      for (const photo of batchPhotos) {
+        const result = await loadImageAsDataURL(photo.url);
+        if (!result) continue;
 
-      let { dataUrl, w, h } = result;
-      if (photo.transforms) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const rotation = (photo.transforms.rotation || 0) % 360;
-        const flipH = photo.transforms.flipH || false;
-        const img = new window.Image();
+        let { dataUrl, w, h } = result;
+        if (photo.transforms) {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const rotation = (photo.transforms.rotation || 0) % 360;
+          const flipH = photo.transforms.flipH || false;
+          const img = new window.Image();
+          
+          await new Promise((resolve) => {
+            img.onload = () => {
+              if (rotation === 90 || rotation === 270) {
+                canvas.width = h;
+                canvas.height = w;
+              } else {
+                canvas.width = w;
+                canvas.height = h;
+              }
+              ctx.translate(canvas.width / 2, canvas.height / 2);
+              if (flipH) ctx.scale(-1, 1);
+              ctx.rotate((rotation * Math.PI) / 180);
+              ctx.drawImage(img, -w / 2, -h / 2);
+              dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+              if (rotation === 90 || rotation === 270) { const tmp = w; w = h; h = tmp; }
+              resolve();
+            };
+            img.onerror = () => resolve();
+            img.src = result.dataUrl;
+          });
+        }
         
-        await new Promise((resolve) => {
-          img.onload = () => {
-            if (rotation === 90 || rotation === 270) {
-              canvas.width = h;
-              canvas.height = w;
-            } else {
-              canvas.width = w;
-              canvas.height = h;
-            }
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            if (flipH) ctx.scale(-1, 1);
-            ctx.rotate((rotation * Math.PI) / 180);
-            ctx.drawImage(img, -w / 2, -h / 2);
-            dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-            if (rotation === 90 || rotation === 270) { const tmp = w; w = h; h = tmp; }
-            resolve();
-          };
-          img.onerror = () => resolve();
-          img.src = result.dataUrl;
-        });
+        const pH = photoW * (h / w);
+        const captionH = photo.caption ? 16 : 0;
+        processed.push({ dataUrl, w, h, pH, caption: photo.caption, captionH });
       }
 
-      row.push({ dataUrl, w, h, caption: photo.caption });
-      if (row.length === maxPerRow) {
-        const maxH = Math.max(...row.map(p => photoW * (p.h / p.w))) + (row.some(p => p.caption) ? 12 : 0);
-        currentY = ensureSpace(maxH + 6, currentY);
+      if (processed.length === 0) continue;
 
-        row.forEach((p, i) => {
-          const xPos = margin + i * (photoW + 3);
-          const pH = photoW * (p.h / p.w);
-          doc.setDrawColor(200, 208, 220);
-          doc.setLineWidth(0.3);
-          doc.rect(xPos, currentY, photoW, pH);
-          doc.addImage(p.dataUrl, 'JPEG', xPos, currentY, photoW, pH);
+      const maxH = Math.max(...processed.map(p => p.pH)) + processed[0].captionH;
+      currentY = ensureSpace(maxH + 8, currentY);
 
-          if (p.caption) {
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9);
-            doc.setTextColor(...darkText);
-            const lines = doc.splitTextToSize(p.caption, photoW - 1);
-            lines.forEach((line, j) => {
-              doc.text(line, xPos + photoW / 2, currentY + pH + 2 + (j * 3), { align: 'center' });
-            });
-          }
-        });
-
-        currentY += maxH + 3;
-        row = [];
-      }
-    }
-
-    // Remaining photos
-    if (row.length > 0) {
-      const maxH = Math.max(...row.map(p => photoW * (p.h / p.w))) + (row.some(p => p.caption) ? 12 : 0);
-      currentY = ensureSpace(maxH + 6, currentY);
-
-      row.forEach((p, i) => {
+      processed.forEach((p, i) => {
         const xPos = margin + i * (photoW + 3);
-        const pH = photoW * (p.h / p.w);
         doc.setDrawColor(200, 208, 220);
         doc.setLineWidth(0.3);
-        doc.rect(xPos, currentY, photoW, pH);
-        doc.addImage(p.dataUrl, 'JPEG', xPos, currentY, photoW, pH);
+        doc.rect(xPos, currentY, photoW, p.pH);
+        doc.addImage(p.dataUrl, 'JPEG', xPos, currentY, photoW, p.pH);
 
         if (p.caption) {
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
+          doc.setFontSize(11);
           doc.setTextColor(...darkText);
-          const lines = doc.splitTextToSize(p.caption, photoW - 1);
+          const lines = doc.splitTextToSize(p.caption, photoW - 2);
+          const lineH = 4;
           lines.forEach((line, j) => {
-            doc.text(line, xPos + photoW / 2, currentY + pH + 2 + (j * 3), { align: 'center' });
+            doc.text(line, xPos + photoW / 2, currentY + p.pH + 3 + (j * lineH), { align: 'center', maxWidth: photoW - 2 });
           });
         }
       });
 
-      currentY += maxH + 3;
+      currentY += maxH + 6;
+      
+      if (photoIdx < photos.length) {
+        currentY = addPage();
+      }
     }
 
-    return currentY + 4;
+    return currentY + 2;
   };
 
   // ── PIECE WEIGHTS ──
@@ -450,17 +441,11 @@ async function generatePDF(evaluation) {
           doc.setTextColor(100, 110, 130);
           doc.text(String((i + idx + 1)), x + gridColW / 2, y + 2.5, { align: 'center' });
           
-          // Weight value (larger, bold)
+          // Weight value + g (larger, bold)
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(10);
           doc.setTextColor(...primaryColor);
-          doc.text(String(w.toFixed(1)), x + gridColW / 2, y + 7.5, { align: 'center' });
-          
-          // 'g' label (small)
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7);
-          doc.setTextColor(100, 110, 130);
-          doc.text('g', x + gridColW / 2 + 3, y + 7, { align: 'left' });
+          doc.text(String(w.toFixed(1)) + 'g', x + gridColW / 2, y + 7.5, { align: 'center' });
         });
         
         y += gridItemH + 2;
