@@ -253,7 +253,9 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
     
     const cleaned = {
       ...form,
+      label_photos: (form.label_photos || []).filter(p => p?.url),
       product_photos: (form.product_photos || []).filter(p => p?.url),
+      grading_photos: (form.grading_photos || []).filter(p => p?.url),
       weekly_slaughter: isAnimalProtein ? form.weekly_slaughter : '',
       piece_weights: hasWeightGrid ? weights : [],
       // Store actual count so display shows "X/X" instead of "X/50" or "X/30"
