@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Download, Mail, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { Download, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 
@@ -319,9 +315,6 @@ async function generatePDF(evaluation) {
 }
 
 export default function ProductEvaluationPDF({ evaluation }) {
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [emailTo, setEmailTo] = useState('');
-  const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   // Format: SupplierName PlantNo - ProductName - DD Mon YYYY
@@ -346,59 +339,12 @@ export default function ProductEvaluationPDF({ evaluation }) {
     setDownloading(false);
   };
 
-  const handleEmail = async () => {
-    if (!emailTo) return;
-    setSending(true);
-    await base44.integrations.Core.SendEmail({
-      to: emailTo,
-      subject: `Product Evaluation Report — ${evaluation.supplier_name} — ${evaluation.product_name}`,
-      body: `Please find the product evaluation report for ${evaluation.product_name} from ${evaluation.supplier_name} dated ${fmt(evaluation.date)}.\n\nTo download the PDF, please use the Download PDF button in the app and attach it manually to your email.`,
-    });
-    setSending(false);
-    setEmailOpen(false);
-  };
-
   return (
-    <>
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={handleDownload} disabled={downloading} className="gap-2">
-          {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-          {downloading ? 'Generating...' : 'Download PDF'}
-        </Button>
-        <Button variant="outline" onClick={() => setEmailOpen(true)} className="gap-2">
-          <Mail className="w-4 h-4" />
-          Email PDF
-        </Button>
-      </div>
-
-      <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Email Evaluation Report</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 pt-2">
-            <div>
-              <Label className="text-sm">Recipient Email</Label>
-              <Input
-                type="email"
-                placeholder="recipient@email.com"
-                value={emailTo}
-                onChange={e => setEmailTo(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              A notification email will be sent for <strong>{evaluation.supplier_name} — {evaluation.product_name}</strong>. Use Download PDF to attach it.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEmailOpen(false)}>Cancel</Button>
-              <Button onClick={handleEmail} disabled={sending || !emailTo}>
-                {sending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Sending...</> : 'Send Email'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    <div className="flex gap-2">
+      <Button variant="outline" onClick={handleDownload} disabled={downloading} className="gap-2">
+        {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+        {downloading ? 'Generating...' : 'Download PDF'}
+      </Button>
+    </div>
   );
 }
