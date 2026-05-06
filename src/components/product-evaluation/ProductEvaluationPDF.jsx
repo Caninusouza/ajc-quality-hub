@@ -241,62 +241,56 @@ async function generatePDF(evaluation) {
   const addPhoto = async (photo, currentY) => {
     const result = await loadImageAsDataURL(photo.url);
     if (!result) return currentY;
-    const { dataUrl, w, h } = result;
+    let { dataUrl, w, h } = result;
     
-    // Apply photo transforms (rotation, flip) to canvas before adding to PDF
-    let finalDataUrl = dataUrl;
+    // Apply photo transforms (rotation, flip) directly to canvas
     if (photo.transforms) {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      const transformedDataUrl = await new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const rotation = (photo.transforms.rotation || 0) % 360;
+      const flipH = photo.transforms.flipH || false;
+      const img = new window.Image();
+      
+      await new Promise((resolve) => {
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const rotation = (photo.transforms.rotation || 0) % 360;
-          const flipH = photo.transforms.flipH || false;
-          
-          // Set canvas size based on rotation
           if (rotation === 90 || rotation === 270) {
-            canvas.width = img.height;
-            canvas.height = img.width;
+            canvas.width = h;
+            canvas.height = w;
           } else {
-            canvas.width = img.width;
-            canvas.height = img.height;
+            canvas.width = w;
+            canvas.height = h;
           }
           
           ctx.translate(canvas.width / 2, canvas.height / 2);
           if (flipH) ctx.scale(-1, 1);
           ctx.rotate((rotation * Math.PI) / 180);
-          ctx.drawImage(img, -img.width / 2, -img.height / 2);
+          ctx.drawImage(img, -w / 2, -h / 2);
           
-          resolve(canvas.toDataURL('image/jpeg', 0.88));
+          dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+          if (rotation === 90 || rotation === 270) { const tmp = w; w = h; h = tmp; }
+          resolve();
         };
-        img.onerror = () => resolve(dataUrl);
-        img.src = dataUrl;
+        img.onerror = () => resolve();
+        img.src = result.dataUrl;
       });
-      finalDataUrl = transformedDataUrl;
     }
     
     const aspect = h / w;
-    const imgW = Math.min(PHOTO_W, contentW); // 127mm or page width
+    const imgW = Math.min(PHOTO_W, contentW);
     const imgH = imgW * aspect;
 
-    // Check if it fits on current page (image + optional caption with extra space)
     const captionH = photo.caption ? 12 : 0;
     const neededH = imgH + captionH + 6;
     currentY = ensureSpace(neededH, currentY);
 
-    // Center horizontally
     const x = margin + (contentW - imgW) / 2;
 
-    // Subtle shadow/border
     doc.setDrawColor(200, 208, 220);
     doc.setLineWidth(0.3);
     doc.rect(x, currentY, imgW, imgH);
-    doc.addImage(finalDataUrl, 'JPEG', x, currentY, imgW, imgH);
+    doc.addImage(dataUrl, 'JPEG', x, currentY, imgW, imgH);
     currentY += imgH + 4;
 
-    // Caption
     if (photo.caption) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
@@ -309,6 +303,101 @@ async function generatePDF(evaluation) {
     }
 
     return currentY + 3;
+  };
+
+  // ── MULTI-PHOTO section (2 per row if content fits) ──
+  const addPhotoGrid = async (photos, currentY) => {
+    if (!photos?.length) return currentY;
+    const photoW = (contentW - 4) / 2;
+    let row = [];
+
+    for (const photo of photos) {
+      const result = await loadImageAsDataURL(photo.url);
+      if (!result) continue;
+
+      let { dataUrl, w, h } = result;
+      if (photo.transforms) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const rotation = (photo.transforms.rotation || 0) % 360;
+        const flipH = photo.transforms.flipH || false;
+        const img = new window.Image();
+        
+        await new Promise((resolve) => {
+          img.onload = () => {
+            if (rotation === 90 || rotation === 270) {
+              canvas.width = h;
+              canvas.height = w;
+            } else {
+              canvas.width = w;
+              canvas.height = h;
+            }
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            if (flipH) ctx.scale(-1, 1);
+            ctx.rotate((rotation * Math.PI) / 180);
+            ctx.drawImage(img, -w / 2, -h / 2);
+            dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+            if (rotation === 90 || rotation === 270) { const tmp = w; w = h; h = tmp; }
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = result.dataUrl;
+        });
+      }
+
+      row.push({ dataUrl, w, h, caption: photo.caption });
+      if (row.length === 2) {
+        const maxH = Math.max(photoW * (row[0].h / row[0].w), photoW * (row[1].h / row[1].w)) + (row[0].caption || row[1].caption ? 10 : 0);
+        currentY = ensureSpace(maxH + 6, currentY);
+
+        row.forEach((p, i) => {
+          const xPos = margin + i * (photoW + 2);
+          const pH = photoW * (p.h / p.w);
+          doc.setDrawColor(200, 208, 220);
+          doc.setLineWidth(0.3);
+          doc.rect(xPos, currentY, photoW, pH);
+          doc.addImage(p.dataUrl, 'JPEG', xPos, currentY, photoW, pH);
+
+          if (p.caption) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(...darkText);
+            const lines = doc.splitTextToSize(p.caption, photoW - 1);
+            lines.forEach((line, j) => {
+              doc.text(line, xPos + photoW / 2, currentY + pH + 2 + (j * 3), { align: 'center' });
+            });
+          }
+        });
+
+        currentY += maxH + 3;
+        row = [];
+      }
+    }
+
+    // Remaining single photo
+    if (row.length === 1) {
+      const p = row[0];
+      const pH = photoW * (p.h / p.w);
+      currentY = ensureSpace(pH + 10, currentY);
+      const xPos = margin + (contentW - photoW) / 2;
+      doc.setDrawColor(200, 208, 220);
+      doc.setLineWidth(0.3);
+      doc.rect(xPos, currentY, photoW, pH);
+      doc.addImage(p.dataUrl, 'JPEG', xPos, currentY, photoW, pH);
+      currentY += pH + 2;
+      if (p.caption) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(...darkText);
+        const lines = doc.splitTextToSize(p.caption, photoW - 1);
+        lines.forEach((line, j) => {
+          doc.text(line, xPos + photoW / 2, currentY + (j * 3.5), { align: 'center' });
+        });
+        currentY += lines.length * 3.5;
+      }
+    }
+
+    return currentY + 4;
   };
 
   // ── PRODUCT LABEL ──
@@ -340,13 +429,63 @@ async function generatePDF(evaluation) {
     y += 4;
   }
 
+  // ── PIECE WEIGHTS ──
+  const WEIGHT_GRID_CATEGORIES = ['Chicken', 'Pork'];
+  const hasWeights = WEIGHT_GRID_CATEGORIES.includes(evaluation.product_category) && (evaluation.piece_weights?.length || 0) > 0;
+  
+  if (hasWeights) {
+    const weights = (evaluation.piece_weights || []).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
+    if (weights.length > 0) {
+      y = sectionTitle(`PIECE WEIGHTS — ${evaluation.product_category}`, y);
+      
+      const avg = (weights.reduce((s, v) => s + v, 0) / weights.length).toFixed(1);
+      const min = Math.min(...weights).toFixed(1);
+      const max = Math.max(...weights).toFixed(1);
+      const displayCount = evaluation._actual_piece_count || weights.length;
+      
+      // Summary stats
+      y = ensureSpace(16, y);
+      doc.setFillColor(...lightBlue);
+      doc.rect(margin, y, contentW, 14, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...primaryColor);
+      doc.text(`Average: ${avg}g | Range: ${min}g–${max}g | Pieces: ${weights.length}/${displayCount}`, margin + 2, y + 5);
+      y += 16;
+      
+      // Weight grid (10 columns)
+      const gridColW = contentW / 10;
+      const gridItemH = 6;
+      doc.setFontSize(8);
+      doc.setTextColor(...darkText);
+      
+      for (let i = 0; i < weights.length; i += 10) {
+        const row = weights.slice(i, i + 10);
+        y = ensureSpace(gridItemH + 3, y);
+        
+        row.forEach((w, idx) => {
+          const x = margin + idx * gridColW;
+          doc.setDrawColor(210, 218, 230);
+          doc.rect(x, y, gridColW, gridItemH);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.text(String((i + idx + 1)), x + gridColW / 2, y + 2, { align: 'center' });
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8);
+          doc.text(String(w.toFixed(1)), x + gridColW / 2, y + 5.5, { align: 'center' });
+        });
+        
+        y += gridItemH + 1;
+      }
+      y += 4;
+    }
+  }
+
   // ── PRODUCT PHOTOS ──
   const productPhotos = (evaluation.product_photos || []).filter(p => p.url);
   if (productPhotos.length > 0) {
     y = sectionTitle('PRODUCT PHOTOS', y);
-    for (const photo of productPhotos) {
-      y = await addPhoto(photo, y);
-    }
+    y = await addPhotoGrid(productPhotos, y);
   }
 
   drawFooter();
