@@ -1,0 +1,111 @@
+{
+  "name": "ProductEvaluation",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "supplier_name": {
+      "type": "string"
+    },
+    "product_name": {
+      "type": "string"
+    },
+    "plant_no": {
+      "type": "string"
+    },
+    "product_code": {
+      "type": "string"
+    },
+    "brand": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "pack": {
+      "type": "string"
+    },
+    "special": {
+      "type": "string"
+    },
+    "avg_live_wt_current": {
+      "type": "string"
+    },
+    "avg_live_wt_target": {
+      "type": "string"
+    },
+    "weekly_slaughter": {
+      "type": "string"
+    },
+    "pack_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "shelf_life": {
+      "type": "string"
+    },
+    "notes_comments": {
+      "type": "string"
+    },
+    "grading_profile": {
+      "type": "string"
+    },
+    "label_photos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "product_photos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "grading_photos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Submitted"
+      ],
+      "default": "Draft"
+    }
+  },
+  "required": [
+    "supplier_name",
+    "product_name",
+    "date"
+  ]
+}
