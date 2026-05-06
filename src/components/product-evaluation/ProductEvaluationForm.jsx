@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { base44 } from '@/api/base44Client';
-import { X, ImageIcon } from 'lucide-react';
+import { X, ImageIcon, GripVertical } from 'lucide-react';
 import USCityAutocomplete from '@/components/shared/USCityAutocomplete';
 import WeightGrid from '@/components/product-evaluation/WeightGrid';
 import { useAutosave } from '@/hooks/useAutosave';
@@ -87,10 +87,11 @@ function PhotoUploader({ label, photos, onChange }) {
   );
 }
 
-// Product photos uploader: up to 10 slots, each with a caption field
+// Product photos uploader: up to 10 slots, each with a caption field, with drag-and-drop reordering
 function ProductPhotoUploader({ photos, onChange }) {
   const [uploading, setUploading] = useState(null);
   const [editingPhoto, setEditingPhoto] = useState(null);
+  const [draggedIdx, setDraggedIdx] = useState(null);
 
   const handleFile = async (e, idx) => {
     const file = e.target.files[0];
@@ -106,7 +107,7 @@ function ProductPhotoUploader({ photos, onChange }) {
 
   const removePhoto = (idx) => {
     const updated = [...photos];
-    updated[idx] = { ...updated[idx], url: '', name: '' };
+    updated[idx] = { ...updated[idx], url: '', name: '', caption: '' };
     onChange(updated);
   };
 
@@ -122,18 +123,47 @@ function ProductPhotoUploader({ photos, onChange }) {
     onChange(newPhotos);
   };
 
+  const handleDragStart = (idx) => {
+    if (photos[idx]?.url) setDraggedIdx(idx);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (targetIdx) => {
+    if (draggedIdx === null || draggedIdx === targetIdx || !photos[draggedIdx]?.url) return;
+    const updated = [...photos];
+    [updated[draggedIdx], updated[targetIdx]] = [updated[targetIdx], updated[draggedIdx]];
+    onChange(updated);
+    setDraggedIdx(null);
+  };
+
   const slots = Array.from({ length: MAX_PRODUCT_PHOTOS }, (_, i) => photos[i] || { name: '', url: '', caption: '' });
 
   return (
     <div className="space-y-3">
       <Label className="text-sm font-semibold">Product Photos (up to {MAX_PRODUCT_PHOTOS})</Label>
+      <p className="text-xs text-muted-foreground">Drag photos to reorder them</p>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {slots.map((slot, i) => (
-          <div key={i} className="flex flex-col gap-1.5">
+          <div
+            key={i}
+            className="flex flex-col gap-1.5"
+            draggable={!!slot.url}
+            onDragStart={() => handleDragStart(i)}
+            onDragOver={handleDragOver}
+            onDrop={() => handleDrop(i)}
+            style={{ opacity: draggedIdx === i ? 0.5 : 1 }}
+          >
             <div className="relative group w-full aspect-square rounded-lg overflow-hidden border border-border bg-muted/40 cursor-pointer" onClick={() => slot.url && setEditingPhoto(slot)}>
               {slot.url ? (
                 <>
+                  {draggedIdx === i && <div className="absolute inset-0 bg-primary/20 z-10" />}
                   <img src={slot.url} alt={slot.name} className="w-full h-full object-cover" style={slot.transforms ? { transform: `rotate(${slot.transforms.rotation}deg) scaleX(${slot.transforms.flipH ? -1 : 1})` } : {}} />
+                  <div className="absolute top-1 left-1 text-white bg-black/40 rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <GripVertical className="w-3 h-3" />
+                  </div>
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); removePhoto(i); }}
@@ -162,8 +192,9 @@ function ProductPhotoUploader({ photos, onChange }) {
             <Input
               value={slot.caption || ''}
               onChange={(e) => updateCaption(i, e.target.value)}
-              placeholder="What this depicts..."
+              placeholder="Caption"
               className="text-xs h-7 px-2"
+              disabled={!slot.url}
             />
           </div>
         ))}
