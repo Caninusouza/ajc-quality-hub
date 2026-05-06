@@ -303,8 +303,8 @@ export default function ReportDialog({
     const tableStartX = 24;
     const tableW = pageW - 48;
     const colPad = 6;
-    const fontSize = 6.5;
-    const headerFontSize = 7;
+    const fontSize = 8.5;
+    const headerFontSize = 9.5;
 
     // ── Compute column widths based on content ──
     doc.setFontSize(fontSize);
@@ -334,8 +334,8 @@ export default function ReportDialog({
     const totalRaw = colWidths.reduce((a, b) => a + b, 0);
     const scaledWidths = colWidths.map(w => (w / totalRaw) * tableW);
 
-    const minRowH = 18;
-    const rowLineH = 9; // line height in pt for wrapped text
+    const minRowH = 22;
+    const rowLineH = 11; // line height in pt for wrapped text
     const cellPadX = colPad;
     const cellPadY = 4;
     let y = 95;
@@ -556,14 +556,14 @@ function drawHeader(doc, pageW, logoDataUrl, logoW, logoH, titleText) {
   if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 22, 17, logoW, logoH);
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
+  doc.setFontSize(19);
   doc.setTextColor(255, 255, 255);
   doc.text(titleText, pageW / 2, 32, { align: 'center' });
 }
 
 function drawSubtitle(doc, pageW, text) {
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(10);
   doc.setTextColor(180, 205, 230);
   doc.text(text, pageW / 2, 52, { align: 'center' });
 }
@@ -574,7 +574,7 @@ function drawFooter(doc, pageW, pageH, page) {
   doc.setFillColor(234, 88, 12);
   doc.rect(0, pageH - 28, pageW, 2, 'F');
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(9.5);
   doc.setTextColor(180, 205, 230);
   doc.text('AJC International · FSQA Hub · Confidential', 24, pageH - 9);
   doc.text(`Page ${page}`, pageW - 24, pageH - 9, { align: 'right' });

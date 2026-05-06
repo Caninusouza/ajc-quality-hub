@@ -71,10 +71,10 @@ async function generatePDF(evaluation) {
       doc.addImage(logoResult.dataUrl, 'PNG', margin, (HEADER_H - logoH) / 2, logoW, logoH);
       // Title next to logo
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(11);
+      doc.setFontSize(13);
       doc.setFont('helvetica', 'bold');
       doc.text('AJC International', margin + logoW + 4, HEADER_H / 2 - 0.5);
-      doc.setFontSize(7.5);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(200, 215, 235);
       doc.text('FOOD SAFETY & QUALITY ASSURANCE', margin + logoW + 4, HEADER_H / 2 + 4.5);
@@ -86,11 +86,11 @@ async function generatePDF(evaluation) {
     }
     // Right: report label
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
+    doc.setFontSize(11);
     doc.setTextColor(255, 255, 255);
     doc.text('PRODUCT EVALUATION REPORT', pageW - margin, HEADER_H / 2 - 1, { align: 'right' });
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
+    doc.setFontSize(9);
     doc.setTextColor(200, 215, 235);
     doc.text(fmt(evaluation.date), pageW - margin, HEADER_H / 2 + 4, { align: 'right' });
   };
@@ -100,7 +100,7 @@ async function generatePDF(evaluation) {
     doc.rect(0, pageH - FOOTER_H, pageW, FOOTER_H, 'F');
     doc.setFillColor(...accentColor);
     doc.rect(0, pageH - FOOTER_H, pageW, 0.8, 'F');
-    doc.setFontSize(7.5);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...mutedText);
     doc.text(`${evaluation.supplier_name} — ${evaluation.product_name}`, margin, pageH - 3.5);
@@ -147,8 +147,8 @@ async function generatePDF(evaluation) {
   ];
 
   const col1W = 46, col2W = 52, col3W = 46, col4W = contentW - col1W - col2W - col3W;
-  const cellPadX = 2, cellPadY = 2, lineH = 4.5, minCellH = 7;
-  const fontSize = 7.5;
+  const cellPadX = 2, cellPadY = 2, lineH = 5.5, minCellH = 9;
+  const fontSize = 9.5;
 
   // Returns wrapped lines array for a given text and max width
   const wrapCell = (text, maxW) => {
@@ -220,7 +220,7 @@ async function generatePDF(evaluation) {
     doc.rect(margin, currentY, 3, 7, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
+    doc.setFontSize(11);
     doc.text(title, margin + 6, currentY + 5);
     return currentY + 11;
   };
@@ -229,7 +229,7 @@ async function generatePDF(evaluation) {
   const textBlock = (text, currentY) => {
     if (!text?.trim()) return currentY;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    doc.setFontSize(11);
     doc.setTextColor(...darkText);
     const lines = doc.splitTextToSize(text, contentW);
     for (const line of lines) {
