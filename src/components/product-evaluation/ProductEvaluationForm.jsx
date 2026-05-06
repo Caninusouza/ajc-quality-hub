@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { base44 } from '@/api/base44Client';
-import { X, ImageIcon, Camera } from 'lucide-react';
+import { X, ImageIcon } from 'lucide-react';
 import USCityAutocomplete from '@/components/shared/USCityAutocomplete';
 import WeightGrid from '@/components/product-evaluation/WeightGrid';
 
@@ -28,15 +28,9 @@ const ANIMAL_PROTEINS = ['Chicken', 'Turkey', 'Pork', 'Beef', 'Lamb', 'Fish/Seaf
 
 const MAX_PRODUCT_PHOTOS = 10;
 
-// Detects mobile/tablet so we can show camera option
-function isMobile() {
-  return /Mobi|Android|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent);
-}
-
 // Simple uploader for label/grading photos (no caption)
 function PhotoUploader({ label, photos, onChange }) {
   const [uploading, setUploading] = useState(false);
-  const mobile = isMobile();
 
   const handleFiles = async (e) => {
     const files = Array.from(e.target.files);
@@ -71,21 +65,11 @@ function PhotoUploader({ label, photos, onChange }) {
           </div>
         ))}
 
-        {/* Add from library */}
         <label className={`w-28 h-28 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/40 cursor-pointer hover:bg-muted transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
           <ImageIcon className="w-5 h-5 text-muted-foreground mb-1" />
           <span className="text-xs text-muted-foreground text-center px-1">{uploading ? 'Uploading...' : 'Add Photo'}</span>
           <input type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
         </label>
-
-        {/* Take photo — mobile only */}
-        {mobile && (
-          <label className={`w-28 h-28 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-            <Camera className="w-5 h-5 text-primary mb-1" />
-            <span className="text-xs text-primary text-center px-1">Take Photo</span>
-            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFiles} />
-          </label>
-        )}
       </div>
     </div>
   );
@@ -94,7 +78,6 @@ function PhotoUploader({ label, photos, onChange }) {
 // Product photos uploader: up to 10 slots, each with a caption field
 function ProductPhotoUploader({ photos, onChange }) {
   const [uploading, setUploading] = useState(null);
-  const mobile = isMobile();
 
   const handleFile = async (e, idx) => {
     const file = e.target.files[0];
@@ -144,18 +127,6 @@ function ProductPhotoUploader({ photos, onChange }) {
                 <div className={`w-full h-full flex flex-col items-center justify-center gap-1 ${uploading === i ? 'opacity-50' : ''}`}>
                   {uploading === i ? (
                     <span className="text-xs text-muted-foreground">Uploading...</span>
-                  ) : mobile ? (
-                    /* Mobile: two mini buttons stacked */
-                    <>
-                      <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-                        <ImageIcon className="w-3.5 h-3.5" /> Library
-                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e, i)} />
-                      </label>
-                      <label className="flex items-center gap-1 text-xs text-primary cursor-pointer hover:text-primary/80 transition-colors">
-                        <Camera className="w-3.5 h-3.5" /> Camera
-                        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleFile(e, i)} />
-                      </label>
-                    </>
                   ) : (
                     <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted transition-colors">
                       <ImageIcon className="w-5 h-5 text-muted-foreground mb-1" />
