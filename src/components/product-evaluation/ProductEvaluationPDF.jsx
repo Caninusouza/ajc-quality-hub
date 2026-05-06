@@ -146,38 +146,67 @@ async function generatePDF(evaluation) {
     ['Shelf Life', evaluation.shelf_life, '', ''],
   ];
 
-  const cellH = 7;
   const col1W = 46, col2W = 52, col3W = 46, col4W = contentW - col1W - col2W - col3W;
+  const cellPadX = 2, cellPadY = 2, lineH = 4.5, minCellH = 7;
+  const fontSize = 7.5;
+
+  // Returns wrapped lines array for a given text and max width
+  const wrapCell = (text, maxW) => {
+    doc.setFontSize(fontSize);
+    return doc.splitTextToSize(String(text || '—'), maxW - cellPadX * 2);
+  };
 
   infoRows.forEach(([l1, v1, l2, v2], rowIdx) => {
+    doc.setFontSize(fontSize);
+
+    // Compute wrapped lines for each value cell
+    const v1Lines = wrapCell(v1, col2W);
+    const v2Lines = l2 ? wrapCell(v2, col4W) : [];
+
+    // Row height = tallest cell, minimum minCellH
+    const rowH = Math.max(minCellH, (Math.max(v1Lines.length, l2 ? v2Lines.length : 0)) * lineH + cellPadY * 2);
+
     const bg = rowIdx % 2 === 0 ? lightBlue : white;
     doc.setFillColor(...bg);
-    doc.rect(margin, y, contentW, cellH, 'F');
+    doc.rect(margin, y, contentW, rowH, 'F');
     doc.setDrawColor(210, 218, 230);
-    doc.rect(margin, y, contentW, cellH);
-    // vertical dividers
-    doc.line(margin + col1W, y, margin + col1W, y + cellH);
-    doc.line(margin + col1W + col2W, y, margin + col1W + col2W, y + cellH);
-    if (l2) doc.line(margin + col1W + col2W + col3W, y, margin + col1W + col2W + col3W, y + cellH);
+    doc.setLineWidth(0.2);
+    doc.rect(margin, y, contentW, rowH);
 
-    doc.setFontSize(7.5);
+    // Vertical dividers
+    doc.line(margin + col1W, y, margin + col1W, y + rowH);
+    doc.line(margin + col1W + col2W, y, margin + col1W + col2W, y + rowH);
+    if (l2) doc.line(margin + col1W + col2W + col3W, y, margin + col1W + col2W + col3W, y + rowH);
+
+    const textBaseY = y + cellPadY + lineH - 0.5;
+
+    // Label 1 (bold, primary)
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...primaryColor);
-    doc.text(l1 || '', margin + 2, y + 4.6);
+    doc.text(l1 || '', margin + cellPadX, textBaseY);
 
+    // Value 1 (wrapped)
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...darkText);
-    doc.text(String(v1 || '—'), margin + col1W + 2, y + 4.6);
+    v1Lines.forEach((line, i) => {
+      doc.text(line, margin + col1W + cellPadX, textBaseY + i * lineH);
+    });
 
     if (l2) {
+      // Label 2
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...primaryColor);
-      doc.text(l2, margin + col1W + col2W + 2, y + 4.6);
+      doc.text(l2, margin + col1W + col2W + cellPadX, textBaseY);
+
+      // Value 2 (wrapped)
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...darkText);
-      doc.text(String(v2 || '—'), margin + col1W + col2W + col3W + 2, y + 4.6);
+      v2Lines.forEach((line, i) => {
+        doc.text(line, margin + col1W + col2W + col3W + cellPadX, textBaseY + i * lineH);
+      });
     }
-    y += cellH;
+
+    y += rowH;
   });
 
   y += 8;
