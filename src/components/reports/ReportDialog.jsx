@@ -334,38 +334,58 @@ export default function ReportDialog({
     const totalRaw = colWidths.reduce((a, b) => a + b, 0);
     const scaledWidths = colWidths.map(w => (w / totalRaw) * tableW);
 
-    const rowH = 18;
+    const minRowH = 18;
+    const rowLineH = 9; // line height in pt for wrapped text
+    const cellPadX = colPad;
+    const cellPadY = 4;
     let y = 95;
     let page = analyticsPage ? 2 : 1;
 
+    // Helper: get wrapped lines for a cell value given its column width
+    const getCellLines = (raw, col, colW) => {
+      let cellText = '';
+      if (raw == null || raw === '') cellText = '—';
+      else if (col.type === 'date') {
+        try { cellText = format(parseISO(String(raw)), 'MMM d, yyyy'); } catch { cellText = String(raw); }
+      } else if (typeof raw === 'number') cellText = raw.toLocaleString();
+      else cellText = String(raw);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(fontSize);
+      return doc.splitTextToSize(cellText, colW - cellPadX * 2);
+    };
+
     const drawTableHeader = (yy) => {
       doc.setFillColor(26, 54, 93);
-      doc.rect(tableStartX, yy, tableW, rowH + 2, 'F');
+      doc.rect(tableStartX, yy, tableW, minRowH + 2, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(headerFontSize);
       doc.setTextColor(255, 255, 255);
       let xOff = tableStartX;
       cols.forEach((col, i) => {
-        doc.text(col.label.toUpperCase(), xOff + colPad, yy + 13, { maxWidth: scaledWidths[i] - colPad });
+        doc.text(col.label.toUpperCase(), xOff + cellPadX, yy + 13, { maxWidth: scaledWidths[i] - cellPadX });
         xOff += scaledWidths[i];
       });
     };
 
     drawTableHeader(y);
-    y += rowH + 2;
+    y += minRowH + 2;
 
     filtered.forEach((item, rowIdx) => {
+      // Pre-compute all wrapped lines to determine row height
+      const allLines = cols.map((col, i) => getCellLines(item[col.key], col, scaledWidths[i]));
+      const maxLines = Math.max(...allLines.map(l => l.length));
+      const rowH = Math.max(minRowH, maxLines * rowLineH + cellPadY * 2);
+
       if (y + rowH > pageH - 36) {
         drawFooter(doc, pageW, pageH, page);
         doc.addPage();
         page++;
         y = 20;
         drawTableHeader(y);
-        y += rowH + 2;
+        y += minRowH + 2;
       }
 
       // Row bg
-      doc.setFillColor(rowIdx % 2 === 0 ? [240, 245, 255] : [255, 255, 255]);
       if (rowIdx % 2 === 0) doc.setFillColor(240, 245, 255);
       else doc.setFillColor(255, 255, 255);
       doc.rect(tableStartX, y, tableW, rowH, 'F');
@@ -382,16 +402,11 @@ export default function ReportDialog({
 
       let xOff = tableStartX;
       cols.forEach((col, i) => {
-        const raw = item[col.key];
-        let cellText = '';
-        if (raw == null || raw === '') cellText = '—';
-        else if (col.type === 'date') {
-          try { cellText = format(parseISO(String(raw)), 'MMM d, yyyy'); } catch { cellText = String(raw); }
-        } else if (typeof raw === 'number') cellText = raw.toLocaleString();
-        else cellText = String(raw);
-
-        const xText = xOff + colPad + (rowIdx % 2 === 0 && i === 0 ? 3 : 0);
-        doc.text(cellText, xText, y + 12, { maxWidth: scaledWidths[i] - colPad * 2 });
+        const lines = allLines[i];
+        const xText = xOff + cellPadX + (rowIdx % 2 === 0 && i === 0 ? 3 : 0);
+        lines.forEach((line, li) => {
+          doc.text(line, xText, y + cellPadY + rowLineH * (li + 0.8));
+        });
         xOff += scaledWidths[i];
       });
 
