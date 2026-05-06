@@ -53,10 +53,10 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Open Claims" value={openClaims.length} icon={ShieldAlert} subtitle={`${criticalClaims.length} critical`} />
-        <StatCard title="Active Projects" value={activeProjects.length} icon={FolderKanban} subtitle={`${projects.length} total`} />
-        <StatCard title="Pending Tasks" value={pendingTasks.length} icon={CheckSquare} subtitle={`${tasks.filter(t=>t.status==='done').length} completed`} />
-        <StatCard title="Resolution Rate" value={dedupedClaims.length ? `${Math.round((dedupedClaims.filter(c=>['RESOLVED','CLOSED'].includes(c.current_status)).length / dedupedClaims.length) * 100)}%` : '—'} icon={TrendingUp} />
+        <StatCard title="Open Claims" value={openClaims.length} icon={ShieldAlert} subtitle={`${criticalClaims.length} critical`} to="/claims" />
+        <StatCard title="Active Projects" value={activeProjects.length} icon={FolderKanban} subtitle={`${projects.length} total`} to="/projects" />
+        <StatCard title="Pending Tasks" value={pendingTasks.length} icon={CheckSquare} subtitle={`${tasks.filter(t=>t.status==='done').length} completed`} to="/tasks" />
+        <StatCard title="Resolution Rate" value={dedupedClaims.length ? `${Math.round((dedupedClaims.filter(c=>['RESOLVED','CLOSED'].includes(c.current_status)).length / dedupedClaims.length) * 100)}%` : '—'} icon={TrendingUp} to="/claims" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
