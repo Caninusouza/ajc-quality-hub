@@ -305,7 +305,7 @@ async function generatePDF(evaluation) {
     return currentY + 3;
   };
 
-  // ── MULTI-PHOTO section (max 2 per page, no overlaps) ──
+  // ── MULTI-PHOTO section (max 2 per page, stacked vertically) ──
   const addPhotoGrid = async (photos, currentY, maxPerPage = 2) => {
     if (!photos?.length) return currentY;
     
@@ -319,7 +319,6 @@ async function generatePDF(evaluation) {
       }
       photoIdx += batchSize;
       
-      const photoW = (contentW - (batchSize - 1) * 3) / batchSize;
       const processed = [];
 
       for (const photo of batchPhotos) {
@@ -356,36 +355,41 @@ async function generatePDF(evaluation) {
           });
         }
         
-        const pH = photoW * (h / w);
-        const captionH = photo.caption ? 16 : 0;
+        const pH = contentW * (h / w);
+        const captionH = photo.caption ? 18 : 0;
         processed.push({ dataUrl, w, h, pH, caption: photo.caption, captionH });
       }
 
       if (processed.length === 0) continue;
 
-      const maxH = Math.max(...processed.map(p => p.pH)) + processed[0].captionH;
-      currentY = ensureSpace(maxH + 8, currentY);
+      // Calculate total height for all photos in batch
+      const totalH = processed.reduce((sum, p) => sum + p.pH + p.captionH + 8, 0);
+      currentY = ensureSpace(totalH + 4, currentY);
 
-      processed.forEach((p, i) => {
-        const xPos = margin + i * (photoW + 3);
+      // Stack photos vertically
+      processed.forEach((p) => {
         doc.setDrawColor(200, 208, 220);
         doc.setLineWidth(0.3);
-        doc.rect(xPos, currentY, photoW, p.pH);
-        doc.addImage(p.dataUrl, 'JPEG', xPos, currentY, photoW, p.pH);
+        doc.rect(margin, currentY, contentW, p.pH);
+        doc.addImage(p.dataUrl, 'JPEG', margin, currentY, contentW, p.pH);
+        currentY += p.pH;
 
         if (p.caption) {
+          currentY += 5; // Extra space between photo and caption
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(11);
           doc.setTextColor(...darkText);
-          const lines = doc.splitTextToSize(p.caption, photoW - 2);
-          const lineH = 4;
+          const lines = doc.splitTextToSize(p.caption, contentW - 4);
           lines.forEach((line, j) => {
-            doc.text(line, xPos + photoW / 2, currentY + p.pH + 3 + (j * lineH), { align: 'center', maxWidth: photoW - 2 });
+            doc.text(line, pageW / 2, currentY + (j * 4.5), { align: 'center' });
           });
+          currentY += lines.length * 4.5 + 3;
         }
+        
+        currentY += 5; // Space between photo entries
       });
 
-      currentY += maxH + 6;
+      currentY += 2;
       
       if (photoIdx < photos.length) {
         currentY = addPage();
