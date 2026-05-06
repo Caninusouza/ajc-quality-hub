@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { base44 } from '@/api/base44Client';
 import { X, ImageIcon, Camera } from 'lucide-react';
+import USCityAutocomplete from '@/components/shared/USCityAutocomplete';
 
 const DEFAULT = {
   date: '', supplier_name: '', product_name: '',
@@ -222,7 +223,9 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
           <Field label="Brand"><Input value={form.brand} onChange={set('brand')} /></Field>
           <Field label="Plant No."><Input value={form.plant_no} onChange={set('plant_no')} /></Field>
           <Field label="Product Code"><Input value={form.product_code} onChange={set('product_code')} /></Field>
-          <Field label="Location"><Input value={form.location} onChange={set('location')} /></Field>
+          <Field label="Location">
+            <USCityAutocomplete value={form.location} onChange={v => setVal('location', v)} placeholder="City, State..." />
+          </Field>
           <Field label="Pack"><Input value={form.pack} onChange={set('pack')} placeholder="e.g. 3 x 5 kg" /></Field>
           <Field label="Special"><Input value={form.special} onChange={set('special')} /></Field>
           {isAnimalProtein && (
