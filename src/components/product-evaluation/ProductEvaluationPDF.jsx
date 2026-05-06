@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +22,7 @@ async function loadImageAsDataURL(url) {
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
       canvas.getContext('2d').drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
+      resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.88), w: img.naturalWidth, h: img.naturalHeight });
     };
     img.onerror = () => resolve(null);
     img.src = url;
@@ -33,151 +33,218 @@ async function generatePDF(evaluation) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = 210;
   const pageH = 297;
-  const margin = 14;
+  const margin = 16;
   const contentW = pageW - margin * 2;
-  let y = margin;
+  // 5 inches = 127mm
+  const PHOTO_W = 127;
+  const HEADER_H = 20;
+  const FOOTER_H = 10;
+  const SAFE_BOTTOM = pageH - FOOTER_H;
 
-  const primaryColor = [27, 54, 100]; // deep blue
-  const accentColor = [220, 100, 30];  // orange
+  const primaryColor = [27, 54, 100];
+  const lightBlue = [240, 244, 252];
+  const white = [255, 255, 255];
+  const darkText = [30, 30, 30];
+  const mutedText = [100, 110, 130];
 
-  // Header bar
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, pageW, 18, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(13);
-  doc.setFont('helvetica', 'bold');
-  doc.text('AJC International — Product Evaluation Report', margin, 12);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Date: ${fmt(evaluation.date)}`, pageW - margin, 12, { align: 'right' });
-  y = 24;
+  let pageNum = 1;
 
-  // Info Table
-  const fields = [
+  const drawHeader = () => {
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, pageW, HEADER_H, 'F');
+    // Left title
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('AJC International', margin, 13);
+    // Right subtitle
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Product Evaluation Report', pageW - margin, 13, { align: 'right' });
+  };
+
+  const drawFooter = () => {
+    doc.setFillColor(240, 244, 252);
+    doc.rect(0, pageH - FOOTER_H, pageW, FOOTER_H, 'F');
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...mutedText);
+    doc.text(`${evaluation.supplier_name} — ${evaluation.product_name}`, margin, pageH - 3.5);
+    doc.text(`Page ${pageNum}`, pageW - margin, pageH - 3.5, { align: 'right' });
+  };
+
+  const addPage = () => {
+    drawFooter();
+    doc.addPage();
+    pageNum++;
+    drawHeader();
+    return HEADER_H + 8;
+  };
+
+  // Ensure enough space, else new page; returns updated y
+  const ensureSpace = (neededH, currentY) => {
+    if (currentY + neededH > SAFE_BOTTOM) {
+      return addPage();
+    }
+    return currentY;
+  };
+
+  // ── FIRST PAGE ──
+  drawHeader();
+  let y = HEADER_H + 8;
+
+  // ── INFO TABLE ──
+  const infoRows = [
     ['Supplier Name', evaluation.supplier_name, 'Product Name', evaluation.product_name],
     ['Plant No.', evaluation.plant_no, 'Product Code', evaluation.product_code],
     ['Brand', evaluation.brand, 'Location', evaluation.location],
     ['Pack', evaluation.pack, 'Special', evaluation.special],
     ['Avg. Live Wt. (Current)', evaluation.avg_live_wt_current, 'Avg. Live Wt. (Target)', evaluation.avg_live_wt_target],
     ['Weekly Slaughter', evaluation.weekly_slaughter, 'Pack Date', fmt(evaluation.pack_date)],
-    ['Shelf Life', evaluation.shelf_life, '', ''],
+    ['Shelf Life', evaluation.shelf_life, 'Date', fmt(evaluation.date)],
   ];
 
   const cellH = 7;
-  const col1W = 45, col2W = 55, col3W = 45, col4W = contentW - col1W - col2W - col3W;
+  const col1W = 46, col2W = 52, col3W = 46, col4W = contentW - col1W - col2W - col3W;
 
-  fields.forEach(([l1, v1, l2, v2]) => {
-    doc.setFillColor(240, 243, 250);
-    doc.rect(margin, y, col1W, cellH, 'F');
-    doc.setFillColor(255, 255, 255);
-    doc.rect(margin + col1W, y, col2W, cellH, 'F');
-    if (l2) {
-      doc.setFillColor(240, 243, 250);
-      doc.rect(margin + col1W + col2W, y, col3W, cellH, 'F');
-      doc.setFillColor(255, 255, 255);
-      doc.rect(margin + col1W + col2W + col3W, y, col4W, cellH, 'F');
-    }
-    doc.setDrawColor(210, 215, 225);
+  infoRows.forEach(([l1, v1, l2, v2], rowIdx) => {
+    const bg = rowIdx % 2 === 0 ? lightBlue : white;
+    doc.setFillColor(...bg);
+    doc.rect(margin, y, contentW, cellH, 'F');
+    doc.setDrawColor(210, 218, 230);
     doc.rect(margin, y, contentW, cellH);
+    // vertical dividers
+    doc.line(margin + col1W, y, margin + col1W, y + cellH);
+    doc.line(margin + col1W + col2W, y, margin + col1W + col2W, y + cellH);
+    if (l2) doc.line(margin + col1W + col2W + col3W, y, margin + col1W + col2W + col3W, y + cellH);
+
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...primaryColor);
-    doc.text(l1 || '', margin + 1.5, y + 4.5);
+    doc.text(l1 || '', margin + 2, y + 4.6);
+
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(40, 40, 40);
-    doc.text(v1 || '—', margin + col1W + 1.5, y + 4.5);
+    doc.setTextColor(...darkText);
+    doc.text(String(v1 || '—'), margin + col1W + 2, y + 4.6);
+
     if (l2) {
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...primaryColor);
-      doc.text(l2, margin + col1W + col2W + 1.5, y + 4.5);
+      doc.text(l2, margin + col1W + col2W + 2, y + 4.6);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(40, 40, 40);
-      doc.text(v2 || '—', margin + col1W + col2W + col3W + 1.5, y + 4.5);
+      doc.setTextColor(...darkText);
+      doc.text(String(v2 || '—'), margin + col1W + col2W + col3W + 2, y + 4.6);
     }
     y += cellH;
   });
 
-  y += 5;
+  y += 8;
 
-  // Section helper
-  const sectionTitle = (title) => {
-    if (y > pageH - 30) { doc.addPage(); y = margin; }
+  // ── SECTION TITLE helper ──
+  const sectionTitle = (title, currentY) => {
+    currentY = ensureSpace(12, currentY);
     doc.setFillColor(...primaryColor);
-    doc.rect(margin, y, contentW, 6, 'F');
+    doc.rect(margin, currentY, contentW, 7, 'F');
+    // accent left stripe
+    doc.setFillColor(220, 100, 30);
+    doc.rect(margin, currentY, 3, 7, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text(title, margin + 2, y + 4.3);
-    y += 9;
-    doc.setTextColor(40, 40, 40);
+    doc.text(title, margin + 6, currentY + 5);
+    return currentY + 11;
   };
 
-  // Text block helper
-  const textBlock = (text) => {
-    if (!text) return;
+  // ── TEXT BLOCK helper ──
+  const textBlock = (text, currentY) => {
+    if (!text?.trim()) return currentY;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(40, 40, 40);
+    doc.setFontSize(9);
+    doc.setTextColor(...darkText);
     const lines = doc.splitTextToSize(text, contentW);
-    lines.forEach(line => {
-      if (y > pageH - 15) { doc.addPage(); y = margin; }
-      doc.text(line, margin, y);
-      y += 5;
-    });
-    y += 3;
-  };
-
-  // Photo grid helper
-  const photoGrid = async (photos, cols = 3) => {
-    if (!photos?.length) return;
-    const gap = 3;
-    const imgW = (contentW - gap * (cols - 1)) / cols;
-    let col = 0;
-    let rowStartX = margin;
-    let rowMaxH = 0;
-
-    for (const photo of photos) {
-      const dataUrl = await loadImageAsDataURL(photo.url);
-      if (!dataUrl) continue;
-      const imgEl = await new Promise(res => {
-        const i = new Image();
-        i.onload = () => res(i);
-        i.onerror = () => res(null);
-        i.src = dataUrl;
-      });
-      if (!imgEl) continue;
-      const aspect = imgEl.naturalHeight / imgEl.naturalWidth;
-      const imgH = Math.min(imgW * aspect, 70);
-
-      if (y + imgH > pageH - 15) { doc.addPage(); y = margin; col = 0; rowMaxH = 0; rowStartX = margin; }
-
-      const x = margin + col * (imgW + gap);
-      doc.addImage(dataUrl, 'JPEG', x, y, imgW, imgH);
-      rowMaxH = Math.max(rowMaxH, imgH);
-      col++;
-      if (col >= cols) { y += rowMaxH + gap; col = 0; rowMaxH = 0; rowStartX = margin; }
+    for (const line of lines) {
+      currentY = ensureSpace(6, currentY);
+      doc.text(line, margin, currentY);
+      currentY += 5.5;
     }
-    if (col > 0) y += rowMaxH + gap;
-    y += 3;
+    return currentY + 4;
   };
 
-  // Product Label
-  sectionTitle('PRODUCT LABEL');
-  await photoGrid(evaluation.label_photos, 3);
+  // ── PHOTO (single, centered, 5" wide, with optional caption) ──
+  const addPhoto = async (photo, currentY) => {
+    const result = await loadImageAsDataURL(photo.url);
+    if (!result) return currentY;
+    const { dataUrl, w, h } = result;
+    const aspect = h / w;
+    const imgW = Math.min(PHOTO_W, contentW); // 127mm or page width
+    const imgH = imgW * aspect;
 
-  // Notes
-  sectionTitle('NOTES / COMMENTS');
-  textBlock(evaluation.notes_comments);
+    // Check if it fits on current page (image + optional caption)
+    const captionH = photo.caption ? 8 : 0;
+    const neededH = imgH + captionH + 4;
+    currentY = ensureSpace(neededH, currentY);
 
-  // Grading Profile
-  sectionTitle('GRADING PROFILE');
-  textBlock(evaluation.grading_profile);
-  await photoGrid(evaluation.grading_photos, 3);
+    // Center horizontally
+    const x = margin + (contentW - imgW) / 2;
 
-  // Product Photos
-  sectionTitle('PRODUCT PHOTOS');
-  await photoGrid(evaluation.product_photos, 3);
+    // Subtle shadow/border
+    doc.setDrawColor(200, 208, 220);
+    doc.setLineWidth(0.3);
+    doc.rect(x, currentY, imgW, imgH);
+    doc.addImage(dataUrl, 'JPEG', x, currentY, imgW, imgH);
+    currentY += imgH + 2;
 
+    // Caption
+    if (photo.caption) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...mutedText);
+      doc.text(photo.caption, pageW / 2, currentY, { align: 'center' });
+      currentY += 6;
+    }
+
+    return currentY + 4;
+  };
+
+  // ── PRODUCT LABEL ──
+  const labelPhotos = (evaluation.label_photos || []).filter(p => p.url);
+  if (labelPhotos.length > 0) {
+    y = sectionTitle('PRODUCT LABEL', y);
+    for (const photo of labelPhotos) {
+      y = await addPhoto(photo, y);
+    }
+    y += 4;
+  }
+
+  // ── NOTES / COMMENTS ──
+  if (evaluation.notes_comments?.trim()) {
+    y = sectionTitle('NOTES / COMMENTS', y);
+    y = textBlock(evaluation.notes_comments, y);
+    y += 2;
+  }
+
+  // ── GRADING PROFILE ──
+  const gradingPhotos = (evaluation.grading_photos || []).filter(p => p.url);
+  const hasGradingText = evaluation.grading_profile?.trim();
+  if (hasGradingText || gradingPhotos.length > 0) {
+    y = sectionTitle('GRADING PROFILE', y);
+    if (hasGradingText) y = textBlock(evaluation.grading_profile, y);
+    for (const photo of gradingPhotos) {
+      y = await addPhoto(photo, y);
+    }
+    y += 4;
+  }
+
+  // ── PRODUCT PHOTOS ──
+  const productPhotos = (evaluation.product_photos || []).filter(p => p.url);
+  if (productPhotos.length > 0) {
+    y = sectionTitle('PRODUCT PHOTOS', y);
+    for (const photo of productPhotos) {
+      y = await addPhoto(photo, y);
+    }
+  }
+
+  drawFooter();
   return doc;
 }
 
@@ -199,12 +266,10 @@ export default function ProductEvaluationPDF({ evaluation }) {
   const handleEmail = async () => {
     if (!emailTo) return;
     setSending(true);
-    const doc = await generatePDF(evaluation);
-    const pdfDataUri = doc.output('datauristring');
     await base44.integrations.Core.SendEmail({
       to: emailTo,
       subject: `Product Evaluation Report — ${evaluation.supplier_name} — ${evaluation.product_name}`,
-      body: `Please find attached the product evaluation report for ${evaluation.product_name} from ${evaluation.supplier_name} dated ${fmt(evaluation.date)}.\n\nNote: The PDF is attached below as a data link. For full attachment support, use the Download option and attach manually.\n\n${pdfDataUri.slice(0, 200)}...`
+      body: `Please find the product evaluation report for ${evaluation.product_name} from ${evaluation.supplier_name} dated ${fmt(evaluation.date)}.\n\nTo download the PDF, please use the Download PDF button in the app and attach it manually to your email.`,
     });
     setSending(false);
     setEmailOpen(false);
@@ -240,7 +305,7 @@ export default function ProductEvaluationPDF({ evaluation }) {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              An email will be sent with the report details for <strong>{evaluation.supplier_name} — {evaluation.product_name}</strong>.
+              A notification email will be sent for <strong>{evaluation.supplier_name} — {evaluation.product_name}</strong>. Use Download PDF to attach it.
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEmailOpen(false)}>Cancel</Button>

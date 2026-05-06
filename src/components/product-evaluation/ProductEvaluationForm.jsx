@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { base44 } from '@/api/base44Client';
-import { Upload, X, ImageIcon } from 'lucide-react';
+import { X, ImageIcon } from 'lucide-react';
 
 const DEFAULT = {
   date: '', supplier_name: '', product_name: '',
@@ -16,6 +16,9 @@ const DEFAULT = {
   label_photos: [], product_photos: [], grading_photos: [],
 };
 
+const MAX_PRODUCT_PHOTOS = 10;
+
+// Simple uploader for label/grading photos (no caption)
 function PhotoUploader({ label, photos, onChange }) {
   const [uploading, setUploading] = useState(false);
 
@@ -61,9 +64,83 @@ function PhotoUploader({ label, photos, onChange }) {
   );
 }
 
-function Field({ label, children, half }) {
+// Product photos uploader: up to 10 slots, each with a caption field
+function ProductPhotoUploader({ photos, onChange }) {
+  const [uploading, setUploading] = useState(null); // index being uploaded
+
+  const handleFile = async (e, idx) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(idx);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const updated = [...photos];
+    updated[idx] = { ...updated[idx], name: file.name, url: file_url };
+    onChange(updated);
+    setUploading(null);
+    e.target.value = '';
+  };
+
+  const removePhoto = (idx) => {
+    const updated = [...photos];
+    updated[idx] = { ...updated[idx], url: '', name: '' };
+    onChange(updated);
+  };
+
+  const updateCaption = (idx, caption) => {
+    const updated = [...photos];
+    updated[idx] = { ...updated[idx], caption };
+    onChange(updated);
+  };
+
+  // Ensure we always have exactly MAX_PRODUCT_PHOTOS slots
+  const slots = Array.from({ length: MAX_PRODUCT_PHOTOS }, (_, i) => photos[i] || { name: '', url: '', caption: '' });
+
   return (
-    <div className={half ? 'flex flex-col gap-1' : 'flex flex-col gap-1 col-span-2 md:col-span-1'}>
+    <div className="space-y-3">
+      <Label className="text-sm font-semibold">Product Photos (up to {MAX_PRODUCT_PHOTOS})</Label>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {slots.map((slot, i) => (
+          <div key={i} className="flex flex-col gap-1.5">
+            {/* Photo slot */}
+            <div className="relative group w-full aspect-square rounded-lg overflow-hidden border border-border bg-muted/40">
+              {slot.url ? (
+                <>
+                  <img src={slot.url} alt={slot.name} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </>
+              ) : (
+                <label className={`w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted transition-colors ${uploading === i ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <ImageIcon className="w-5 h-5 text-muted-foreground mb-1" />
+                  <span className="text-xs text-muted-foreground text-center px-1">
+                    {uploading === i ? 'Uploading...' : `Photo ${i + 1}`}
+                  </span>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e, i)} />
+                </label>
+              )}
+            </div>
+            {/* Caption */}
+            <Input
+              value={slot.caption || ''}
+              onChange={(e) => updateCaption(i, e.target.value)}
+              placeholder="What this depicts..."
+              className="text-xs h-7 px-2"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div className="flex flex-col gap-1">
       <Label className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</Label>
       {children}
     </div>
@@ -76,11 +153,18 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
   const setVal = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
+  // Filter out empty product photo slots before saving
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const cleaned = {
+      ...form,
+      product_photos: (form.product_photos || []).filter(p => p.url),
+    };
+    onSave(cleaned);
+  };
+
   return (
-    <form
-      onSubmit={e => { e.preventDefault(); onSave(form); }}
-      className="space-y-8 bg-white rounded-xl border border-border p-6"
-    >
+    <form onSubmit={handleSubmit} className="space-y-8 bg-white rounded-xl border border-border p-6">
       {/* Header Info */}
       <div>
         <h2 className="text-lg font-bold text-primary mb-4 border-b pb-2">Product Evaluation Report</h2>
@@ -135,10 +219,13 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
         </div>
       </div>
 
-      {/* Product Photos */}
+      {/* Product Photos (up to 10, each with caption) */}
       <div>
         <h3 className="text-sm font-bold uppercase tracking-wide text-primary border-b pb-1 mb-3">Product Photos</h3>
-        <PhotoUploader label="Product Photos" photos={form.product_photos} onChange={v => setVal('product_photos', v)} />
+        <ProductPhotoUploader
+          photos={form.product_photos}
+          onChange={v => setVal('product_photos', v)}
+        />
       </div>
 
       {/* Actions */}
