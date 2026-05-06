@@ -90,7 +90,7 @@ function PhotoUploader({ label, photos, onChange }) {
 // Product photos uploader: up to 10 slots, each with a caption field, with drag-and-drop reordering
 function ProductPhotoUploader({ photos, onChange }) {
   const [uploading, setUploading] = useState(null);
-  const [editingPhoto, setEditingPhoto] = useState(null);
+  const [editingPhotoIdx, setEditingPhotoIdx] = useState(null);
   const [draggedIdx, setDraggedIdx] = useState(null);
 
   const handleFile = async (e, idx) => {
@@ -156,7 +156,7 @@ function ProductPhotoUploader({ photos, onChange }) {
             onDrop={() => handleDrop(i)}
             style={{ opacity: draggedIdx === i ? 0.5 : 1 }}
           >
-            <div className="relative group w-full aspect-square rounded-lg overflow-hidden border border-border bg-muted/40 cursor-pointer" onClick={() => slot.url && setEditingPhoto(slot)}>
+            <div className="relative group w-full aspect-square rounded-lg overflow-hidden border border-border bg-muted/40 cursor-pointer" onClick={() => slot.url && setEditingPhotoIdx(i)}>
               {slot.url ? (
                 <>
                   {draggedIdx === i && <div className="absolute inset-0 bg-primary/20 z-10" />}
@@ -198,7 +198,7 @@ function ProductPhotoUploader({ photos, onChange }) {
             />
           </div>
         ))}
-        <PhotoEditor isOpen={!!editingPhoto} onClose={() => setEditingPhoto(null)} photo={editingPhoto} onSave={(updated) => { const idx = slots.findIndex(s => s === editingPhoto); if (idx >= 0) updatePhoto(idx, updated); }} />
+        <PhotoEditor isOpen={editingPhotoIdx !== null} onClose={() => setEditingPhotoIdx(null)} photo={editingPhotoIdx !== null ? slots[editingPhotoIdx] : null} onSave={(updated) => { if (editingPhotoIdx >= 0) updatePhoto(editingPhotoIdx, updated); }} />
       </div>
     </div>
   );
