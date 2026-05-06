@@ -352,7 +352,7 @@ export default function ProductEvaluationPDF({ evaluation }) {
     await base44.functions.invoke('sendEmail', {
       to: emailTo,
       subject: `Product Evaluation Report — ${evaluation.supplier_name} — ${evaluation.product_name}`,
-      body: `Please find the product evaluation report for ${evaluation.product_name} from ${evaluation.supplier_name} dated ${fmt(evaluation.date)}.\n\nTo download the PDF, please use the Download PDF button in the app and attach it manually to your email.`,
+      body: `Please find attached the product evaluation report for ${evaluation.product_name} from ${evaluation.supplier_name} dated ${fmt(evaluation.date)}.`,
     });
     setSending(false);
     setEmailOpen(false);
@@ -388,7 +388,7 @@ export default function ProductEvaluationPDF({ evaluation }) {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              A notification email will be sent for <strong>{evaluation.supplier_name} — {evaluation.product_name}</strong>. Download the PDF separately to attach it.
+              A notification email will be sent to the recipient. <strong>Please also use "Download PDF" and attach it manually to a follow-up email.</strong>
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEmailOpen(false)}>Cancel</Button>
