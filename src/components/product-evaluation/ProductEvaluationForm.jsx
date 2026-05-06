@@ -9,6 +9,7 @@ import { X, ImageIcon } from 'lucide-react';
 import USCityAutocomplete from '@/components/shared/USCityAutocomplete';
 import WeightGrid from '@/components/product-evaluation/WeightGrid';
 import { useAutosave } from '@/hooks/useAutosave';
+import PhotoEditor from '@/components/product-evaluation/PhotoEditor';
 
 const DEFAULT = {
   date: '', supplier_name: '', product_name: '',
@@ -32,6 +33,7 @@ const MAX_PRODUCT_PHOTOS = 10;
 // Simple uploader for label/grading photos (no caption)
 function PhotoUploader({ label, photos, onChange }) {
   const [uploading, setUploading] = useState(false);
+  const [editingPhoto, setEditingPhoto] = useState(null);
 
   const handleFiles = async (e) => {
     const files = Array.from(e.target.files);
@@ -48,23 +50,32 @@ function PhotoUploader({ label, photos, onChange }) {
   };
 
   const remove = (idx) => onChange(photos.filter((_, i) => i !== idx));
+  const updatePhoto = (idx, updated) => {
+    const newPhotos = [...photos];
+    newPhotos[idx] = updated;
+    onChange(newPhotos);
+  };
 
   return (
     <div className="space-y-2">
       <Label className="text-sm font-semibold">{label}</Label>
       <div className="flex flex-wrap gap-3">
         {photos.map((p, i) => (
-          <div key={i} className="relative group w-28 h-28 rounded-lg overflow-hidden border border-border bg-muted">
-            <img src={p.url} alt={p.name} className="w-full h-full object-cover" />
+          <div key={i} className="relative group w-28 h-28 rounded-lg overflow-hidden border border-border bg-muted cursor-pointer" onClick={() => setEditingPhoto(p)}>
+            <img src={p.url} alt={p.name} className="w-full h-full object-cover" style={p.transforms ? { transform: `rotate(${p.transforms.rotation}deg) scaleX(${p.transforms.flipH ? -1 : 1})` } : {}} />
             <button
               type="button"
-              onClick={() => remove(i)}
+              onClick={(e) => { e.stopPropagation(); remove(i); }}
               className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <X className="w-3 h-3" />
             </button>
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <span className="text-xs text-white font-medium">Edit</span>
+            </div>
           </div>
         ))}
+        <PhotoEditor isOpen={!!editingPhoto} onClose={() => setEditingPhoto(null)} photo={editingPhoto} onSave={(updated) => { const idx = photos.indexOf(editingPhoto); if (idx >= 0) updatePhoto(idx, updated); }} />
 
         <label className={`w-28 h-28 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/40 cursor-pointer hover:bg-muted transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
           <ImageIcon className="w-5 h-5 text-muted-foreground mb-1" />
@@ -79,6 +90,7 @@ function PhotoUploader({ label, photos, onChange }) {
 // Product photos uploader: up to 10 slots, each with a caption field
 function ProductPhotoUploader({ photos, onChange }) {
   const [uploading, setUploading] = useState(null);
+  const [editingPhoto, setEditingPhoto] = useState(null);
 
   const handleFile = async (e, idx) => {
     const file = e.target.files[0];
@@ -104,6 +116,12 @@ function ProductPhotoUploader({ photos, onChange }) {
     onChange(updated);
   };
 
+  const updatePhoto = (idx, updated) => {
+    const newPhotos = [...photos];
+    newPhotos[idx] = updated;
+    onChange(newPhotos);
+  };
+
   const slots = Array.from({ length: MAX_PRODUCT_PHOTOS }, (_, i) => photos[i] || { name: '', url: '', caption: '' });
 
   return (
@@ -112,17 +130,20 @@ function ProductPhotoUploader({ photos, onChange }) {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {slots.map((slot, i) => (
           <div key={i} className="flex flex-col gap-1.5">
-            <div className="relative group w-full aspect-square rounded-lg overflow-hidden border border-border bg-muted/40">
+            <div className="relative group w-full aspect-square rounded-lg overflow-hidden border border-border bg-muted/40 cursor-pointer" onClick={() => slot.url && setEditingPhoto(slot)}>
               {slot.url ? (
                 <>
-                  <img src={slot.url} alt={slot.name} className="w-full h-full object-cover" />
+                  <img src={slot.url} alt={slot.name} className="w-full h-full object-cover" style={slot.transforms ? { transform: `rotate(${slot.transforms.rotation}deg) scaleX(${slot.transforms.flipH ? -1 : 1})` } : {}} />
                   <button
                     type="button"
-                    onClick={() => removePhoto(i)}
+                    onClick={(e) => { e.stopPropagation(); removePhoto(i); }}
                     className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X className="w-3 h-3" />
                   </button>
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <span className="text-xs text-white font-medium">Edit</span>
+                  </div>
                 </>
               ) : (
                 <div className={`w-full h-full flex flex-col items-center justify-center gap-1 ${uploading === i ? 'opacity-50' : ''}`}>
@@ -146,6 +167,7 @@ function ProductPhotoUploader({ photos, onChange }) {
             />
           </div>
         ))}
+        <PhotoEditor isOpen={!!editingPhoto} onClose={() => setEditingPhoto(null)} photo={editingPhoto} onSave={(updated) => { const idx = slots.findIndex(s => s === editingPhoto); if (idx >= 0) updatePhoto(idx, updated); }} />
       </div>
     </div>
   );

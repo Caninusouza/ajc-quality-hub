@@ -37,6 +37,7 @@ async function generatePDF(evaluation) {
   const HEADER_H = 22;
   const FOOTER_H = 10;
   const SAFE_BOTTOM = pageH - FOOTER_H;
+  const fontSize = 11; // Increased from default
 
   // AJC Color scheme: navy + orange accent
   const primaryColor = [27, 54, 100];   // AJC navy
@@ -67,26 +68,26 @@ async function generatePDF(evaluation) {
       doc.addImage(logoResult.dataUrl, 'PNG', margin, (HEADER_H - logoH) / 2, logoW, logoH);
       // Title next to logo
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(13);
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('AJC International', margin + logoW + 4, HEADER_H / 2 - 0.5);
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(200, 215, 235);
       doc.text('FOOD SAFETY & QUALITY ASSURANCE', margin + logoW + 4, HEADER_H / 2 + 4.5);
     } else {
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
+      doc.setFontSize(13);
       doc.setFont('helvetica', 'bold');
       doc.text('AJC International', margin, 14);
     }
     // Right: report label
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setTextColor(255, 255, 255);
     doc.text('PRODUCT EVALUATION REPORT', pageW - margin, HEADER_H / 2 - 1, { align: 'right' });
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setTextColor(200, 215, 235);
     doc.text(fmt(evaluation.date), pageW - margin, HEADER_H / 2 + 4, { align: 'right' });
   };
@@ -144,16 +145,16 @@ async function generatePDF(evaluation) {
 
   const col1W = 46, col2W = 52, col3W = 46, col4W = contentW - col1W - col2W - col3W;
   const cellPadX = 2, cellPadY = 2, lineH = 5.5, minCellH = 9;
-  const fontSize = 9.5;
+  const tableFontSize = 11;
 
   // Returns wrapped lines array for a given text and max width
   const wrapCell = (text, maxW) => {
-    doc.setFontSize(fontSize);
+    doc.setFontSize(tableFontSize);
     return doc.splitTextToSize(String(text || '—'), maxW - cellPadX * 2);
   };
 
   infoRows.forEach(([l1, v1, l2, v2], rowIdx) => {
-    doc.setFontSize(fontSize);
+    doc.setFontSize(tableFontSize);
 
     // Compute wrapped lines for each value cell
     const v1Lines = wrapCell(v1, col2W);
@@ -216,7 +217,7 @@ async function generatePDF(evaluation) {
     doc.rect(margin, currentY, 3, 7, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.text(title, margin + 6, currentY + 5);
     return currentY + 11;
   };
@@ -225,7 +226,7 @@ async function generatePDF(evaluation) {
   const textBlock = (text, currentY) => {
     if (!text?.trim()) return currentY;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setTextColor(...darkText);
     const lines = doc.splitTextToSize(text, contentW);
     for (const line of lines) {
@@ -263,7 +264,7 @@ async function generatePDF(evaluation) {
     // Caption
     if (photo.caption) {
       doc.setFont('helvetica', 'italic');
-      doc.setFontSize(8.5);
+      doc.setFontSize(10);
       doc.setTextColor(...mutedText);
       doc.text(photo.caption, pageW / 2, currentY, { align: 'center' });
       currentY += 6;
