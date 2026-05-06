@@ -111,6 +111,11 @@ export default function ProductEvaluations() {
           <ProductEvaluationPDF evaluation={editing} />
         </div>
         <EvaluationPreview evaluation={editing} />
+        <div className="flex gap-3 mt-8 pt-4 border-t">
+          <Button variant="outline" onClick={() => { setView('form'); }}>Edit</Button>
+          <Button variant="outline" onClick={() => { setView('list'); setEditing(null); sessionStorage.removeItem('pe_view'); sessionStorage.removeItem('pe_editing'); }}>Back to List</Button>
+          <ProductEvaluationPDF evaluation={editing} />
+        </div>
       </div>
     );
   }
