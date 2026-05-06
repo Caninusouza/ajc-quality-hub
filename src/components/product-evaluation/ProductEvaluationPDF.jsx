@@ -305,10 +305,10 @@ async function generatePDF(evaluation) {
     return currentY + 3;
   };
 
-  // ── MULTI-PHOTO section (2 per row if content fits) ──
-  const addPhotoGrid = async (photos, currentY) => {
+  // ── MULTI-PHOTO section (flexible per row) ──
+  const addPhotoGrid = async (photos, currentY, maxPerRow = 2) => {
     if (!photos?.length) return currentY;
-    const photoW = (contentW - 4) / 2;
+    const photoW = (contentW - (maxPerRow - 1) * 3) / maxPerRow;
     let row = [];
 
     for (const photo of photos) {
@@ -346,12 +346,12 @@ async function generatePDF(evaluation) {
       }
 
       row.push({ dataUrl, w, h, caption: photo.caption });
-      if (row.length === 2) {
-        const maxH = Math.max(photoW * (row[0].h / row[0].w), photoW * (row[1].h / row[1].w)) + (row[0].caption || row[1].caption ? 10 : 0);
+      if (row.length === maxPerRow) {
+        const maxH = Math.max(...row.map(p => photoW * (p.h / p.w))) + (row.some(p => p.caption) ? 12 : 0);
         currentY = ensureSpace(maxH + 6, currentY);
 
         row.forEach((p, i) => {
-          const xPos = margin + i * (photoW + 2);
+          const xPos = margin + i * (photoW + 3);
           const pH = photoW * (p.h / p.w);
           doc.setDrawColor(200, 208, 220);
           doc.setLineWidth(0.3);
@@ -374,39 +374,109 @@ async function generatePDF(evaluation) {
       }
     }
 
-    // Remaining single photo
-    if (row.length === 1) {
-      const p = row[0];
-      const pH = photoW * (p.h / p.w);
-      currentY = ensureSpace(pH + 10, currentY);
-      const xPos = margin + (contentW - photoW) / 2;
-      doc.setDrawColor(200, 208, 220);
-      doc.setLineWidth(0.3);
-      doc.rect(xPos, currentY, photoW, pH);
-      doc.addImage(p.dataUrl, 'JPEG', xPos, currentY, photoW, pH);
-      currentY += pH + 2;
-      if (p.caption) {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(...darkText);
-        const lines = doc.splitTextToSize(p.caption, photoW - 1);
-        lines.forEach((line, j) => {
-          doc.text(line, xPos + photoW / 2, currentY + (j * 3.5), { align: 'center' });
-        });
-        currentY += lines.length * 3.5;
-      }
+    // Remaining photos
+    if (row.length > 0) {
+      const maxH = Math.max(...row.map(p => photoW * (p.h / p.w))) + (row.some(p => p.caption) ? 12 : 0);
+      currentY = ensureSpace(maxH + 6, currentY);
+
+      row.forEach((p, i) => {
+        const xPos = margin + i * (photoW + 3);
+        const pH = photoW * (p.h / p.w);
+        doc.setDrawColor(200, 208, 220);
+        doc.setLineWidth(0.3);
+        doc.rect(xPos, currentY, photoW, pH);
+        doc.addImage(p.dataUrl, 'JPEG', xPos, currentY, photoW, pH);
+
+        if (p.caption) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(...darkText);
+          const lines = doc.splitTextToSize(p.caption, photoW - 1);
+          lines.forEach((line, j) => {
+            doc.text(line, xPos + photoW / 2, currentY + pH + 2 + (j * 3), { align: 'center' });
+          });
+        }
+      });
+
+      currentY += maxH + 3;
     }
 
     return currentY + 4;
   };
 
-  // ── PRODUCT LABEL ──
+  // ── PIECE WEIGHTS ──
+  const hasWeights = ANIMAL_PROTEINS.includes(evaluation.product_category) && ['Chicken', 'Pork'].includes(evaluation.product_category) && (evaluation.piece_weights?.length || 0) > 0;
+  
+  if (hasWeights) {
+    const weights = (evaluation.piece_weights || []).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
+    if (weights.length > 0) {
+      y = sectionTitle(`PIECE WEIGHTS — ${evaluation.product_category}`, y);
+      
+      const avg = (weights.reduce((s, v) => s + v, 0) / weights.length).toFixed(1);
+      const min = Math.min(...weights).toFixed(1);
+      const max = Math.max(...weights).toFixed(1);
+      const displayCount = evaluation._actual_piece_count || weights.length;
+      
+      // Summary stats
+      y = ensureSpace(18, y);
+      doc.setFillColor(...lightBlue);
+      doc.rect(margin, y, contentW, 12, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...primaryColor);
+      doc.text(`Avg: ${avg}g  |  Range: ${min}–${max}g  |  Count: ${weights.length}/${displayCount}`, margin + 2, y + 7);
+      y += 16;
+      
+      // Weight grid (5 columns, much larger)
+      const gridCols = 5;
+      const gridColW = contentW / gridCols;
+      const gridItemH = 11;
+      doc.setFontSize(9);
+      doc.setTextColor(...darkText);
+      
+      for (let i = 0; i < weights.length; i += gridCols) {
+        const row = weights.slice(i, i + gridCols);
+        y = ensureSpace(gridItemH + 3, y);
+        
+        row.forEach((w, idx) => {
+          const x = margin + idx * gridColW;
+          doc.setDrawColor(150, 170, 200);
+          doc.setLineWidth(0.4);
+          doc.rect(x, y, gridColW, gridItemH);
+          
+          // Index number (smaller)
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(100, 110, 130);
+          doc.text(String((i + idx + 1)), x + gridColW / 2, y + 2.5, { align: 'center' });
+          
+          // Weight value (larger, bold)
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(...primaryColor);
+          doc.text(String(w.toFixed(1)), x + gridColW / 2, y + 7.5, { align: 'center' });
+          
+          // 'g' label (small)
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(100, 110, 130);
+          doc.text('g', x + gridColW / 2 + 3, y + 7, { align: 'left' });
+        });
+        
+        y += gridItemH + 2;
+      }
+      y += 3;
+    }
+  }
+
+  // ── PRODUCT LABEL (on second page if weight grid exists) ──
   const labelPhotos = (evaluation.label_photos || []).filter(p => p.url);
   if (labelPhotos.length > 0) {
-    y = sectionTitle('PRODUCT LABEL', y);
-    for (const photo of labelPhotos) {
-      y = await addPhoto(photo, y);
+    if (hasWeights) {
+      y = addPage();
     }
+    y = sectionTitle('PRODUCT LABEL', y);
+    y = await addPhotoGrid(labelPhotos, y, 2);
     y += 4;
   }
 
@@ -423,68 +493,15 @@ async function generatePDF(evaluation) {
   if (hasGradingText || gradingPhotos.length > 0) {
     y = sectionTitle('GRADING PROFILE', y);
     if (hasGradingText) y = textBlock(evaluation.grading_profile, y);
-    for (const photo of gradingPhotos) {
-      y = await addPhoto(photo, y);
-    }
+    y = await addPhotoGrid(gradingPhotos, y, 2);
     y += 4;
-  }
-
-  // ── PIECE WEIGHTS ──
-  const hasWeights = ANIMAL_PROTEINS.includes(evaluation.product_category) && ['Chicken', 'Pork'].includes(evaluation.product_category) && (evaluation.piece_weights?.length || 0) > 0;
-  
-  if (hasWeights) {
-    const weights = (evaluation.piece_weights || []).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
-    if (weights.length > 0) {
-      y = sectionTitle(`PIECE WEIGHTS — ${evaluation.product_category}`, y);
-      
-      const avg = (weights.reduce((s, v) => s + v, 0) / weights.length).toFixed(1);
-      const min = Math.min(...weights).toFixed(1);
-      const max = Math.max(...weights).toFixed(1);
-      const displayCount = evaluation._actual_piece_count || weights.length;
-      
-      // Summary stats
-      y = ensureSpace(16, y);
-      doc.setFillColor(...lightBlue);
-      doc.rect(margin, y, contentW, 14, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(...primaryColor);
-      doc.text(`Average: ${avg}g | Range: ${min}g–${max}g | Pieces: ${weights.length}/${displayCount}`, margin + 2, y + 5);
-      y += 16;
-      
-      // Weight grid (10 columns)
-      const gridColW = contentW / 10;
-      const gridItemH = 6;
-      doc.setFontSize(8);
-      doc.setTextColor(...darkText);
-      
-      for (let i = 0; i < weights.length; i += 10) {
-        const row = weights.slice(i, i + 10);
-        y = ensureSpace(gridItemH + 3, y);
-        
-        row.forEach((w, idx) => {
-          const x = margin + idx * gridColW;
-          doc.setDrawColor(210, 218, 230);
-          doc.rect(x, y, gridColW, gridItemH);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7);
-          doc.text(String((i + idx + 1)), x + gridColW / 2, y + 2, { align: 'center' });
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(8);
-          doc.text(String(w.toFixed(1)), x + gridColW / 2, y + 5.5, { align: 'center' });
-        });
-        
-        y += gridItemH + 1;
-      }
-      y += 4;
-    }
   }
 
   // ── PRODUCT PHOTOS ──
   const productPhotos = (evaluation.product_photos || []).filter(p => p.url);
   if (productPhotos.length > 0) {
     y = sectionTitle('PRODUCT PHOTOS', y);
-    y = await addPhotoGrid(productPhotos, y);
+    y = await addPhotoGrid(productPhotos, y, 2);
   }
 
   drawFooter();
