@@ -3,11 +3,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { base44 } from '@/api/base44Client';
-import { X, ImageIcon } from 'lucide-react';
+import { X, ImageIcon, Camera } from 'lucide-react';
 
 const DEFAULT = {
   date: '', supplier_name: '', product_name: '',
+  product_category: '',
   plant_no: '', product_code: '', brand: '',
   location: '', pack: '', special: '',
   avg_live_wt_current: '', avg_live_wt_target: '',
@@ -16,11 +18,20 @@ const DEFAULT = {
   label_photos: [], product_photos: [], grading_photos: [],
 };
 
+const CATEGORIES = ['Chicken', 'Turkey', 'Pork', 'Beef', 'Lamb', 'Fish/Seafood', 'Vegetables', 'Fruits', 'French Fries', 'Other'];
+const ANIMAL_PROTEINS = ['Chicken', 'Turkey', 'Pork', 'Beef', 'Lamb', 'Fish/Seafood'];
+
 const MAX_PRODUCT_PHOTOS = 10;
+
+// Detects mobile/tablet so we can show camera option
+function isMobile() {
+  return /Mobi|Android|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent);
+}
 
 // Simple uploader for label/grading photos (no caption)
 function PhotoUploader({ label, photos, onChange }) {
   const [uploading, setUploading] = useState(false);
+  const mobile = isMobile();
 
   const handleFiles = async (e) => {
     const files = Array.from(e.target.files);
@@ -54,11 +65,22 @@ function PhotoUploader({ label, photos, onChange }) {
             </button>
           </div>
         ))}
+
+        {/* Add from library */}
         <label className={`w-28 h-28 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/40 cursor-pointer hover:bg-muted transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
           <ImageIcon className="w-5 h-5 text-muted-foreground mb-1" />
-          <span className="text-xs text-muted-foreground">{uploading ? 'Uploading...' : 'Add Photo'}</span>
+          <span className="text-xs text-muted-foreground text-center px-1">{uploading ? 'Uploading...' : 'Add Photo'}</span>
           <input type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
         </label>
+
+        {/* Take photo — mobile only */}
+        {mobile && (
+          <label className={`w-28 h-28 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+            <Camera className="w-5 h-5 text-primary mb-1" />
+            <span className="text-xs text-primary text-center px-1">Take Photo</span>
+            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFiles} />
+          </label>
+        )}
       </div>
     </div>
   );
@@ -66,7 +88,8 @@ function PhotoUploader({ label, photos, onChange }) {
 
 // Product photos uploader: up to 10 slots, each with a caption field
 function ProductPhotoUploader({ photos, onChange }) {
-  const [uploading, setUploading] = useState(null); // index being uploaded
+  const [uploading, setUploading] = useState(null);
+  const mobile = isMobile();
 
   const handleFile = async (e, idx) => {
     const file = e.target.files[0];
@@ -92,7 +115,6 @@ function ProductPhotoUploader({ photos, onChange }) {
     onChange(updated);
   };
 
-  // Ensure we always have exactly MAX_PRODUCT_PHOTOS slots
   const slots = Array.from({ length: MAX_PRODUCT_PHOTOS }, (_, i) => photos[i] || { name: '', url: '', caption: '' });
 
   return (
@@ -101,7 +123,6 @@ function ProductPhotoUploader({ photos, onChange }) {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {slots.map((slot, i) => (
           <div key={i} className="flex flex-col gap-1.5">
-            {/* Photo slot */}
             <div className="relative group w-full aspect-square rounded-lg overflow-hidden border border-border bg-muted/40">
               {slot.url ? (
                 <>
@@ -115,16 +136,31 @@ function ProductPhotoUploader({ photos, onChange }) {
                   </button>
                 </>
               ) : (
-                <label className={`w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted transition-colors ${uploading === i ? 'opacity-50 pointer-events-none' : ''}`}>
-                  <ImageIcon className="w-5 h-5 text-muted-foreground mb-1" />
-                  <span className="text-xs text-muted-foreground text-center px-1">
-                    {uploading === i ? 'Uploading...' : `Photo ${i + 1}`}
-                  </span>
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e, i)} />
-                </label>
+                <div className={`w-full h-full flex flex-col items-center justify-center gap-1 ${uploading === i ? 'opacity-50' : ''}`}>
+                  {uploading === i ? (
+                    <span className="text-xs text-muted-foreground">Uploading...</span>
+                  ) : mobile ? (
+                    /* Mobile: two mini buttons stacked */
+                    <>
+                      <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+                        <ImageIcon className="w-3.5 h-3.5" /> Library
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e, i)} />
+                      </label>
+                      <label className="flex items-center gap-1 text-xs text-primary cursor-pointer hover:text-primary/80 transition-colors">
+                        <Camera className="w-3.5 h-3.5" /> Camera
+                        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleFile(e, i)} />
+                      </label>
+                    </>
+                  ) : (
+                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted transition-colors">
+                      <ImageIcon className="w-5 h-5 text-muted-foreground mb-1" />
+                      <span className="text-xs text-muted-foreground text-center px-1">Photo {i + 1}</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e, i)} />
+                    </label>
+                  )}
+                </div>
               )}
             </div>
-            {/* Caption */}
             <Input
               value={slot.caption || ''}
               onChange={(e) => updateCaption(i, e.target.value)}
@@ -153,12 +189,15 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
   const setVal = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
-  // Filter out empty product photo slots before saving
+  const isAnimalProtein = ANIMAL_PROTEINS.includes(form.product_category);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const cleaned = {
       ...form,
       product_photos: (form.product_photos || []).filter(p => p.url),
+      // Clear weekly_slaughter if not animal protein
+      weekly_slaughter: isAnimalProtein ? form.weekly_slaughter : '',
     };
     onSave(cleaned);
   };
@@ -172,20 +211,32 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
           <Field label="Date"><Input type="date" value={form.date} onChange={set('date')} required /></Field>
           <Field label="Supplier Name"><Input value={form.supplier_name} onChange={set('supplier_name')} required /></Field>
           <Field label="Product Name"><Input value={form.product_name} onChange={set('product_name')} required /></Field>
+          <Field label="Product Category">
+            <Select value={form.product_category} onValueChange={v => setVal('product_category', v)}>
+              <SelectTrigger><SelectValue placeholder="Select category..." /></SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
           <Field label="Brand"><Input value={form.brand} onChange={set('brand')} /></Field>
           <Field label="Plant No."><Input value={form.plant_no} onChange={set('plant_no')} /></Field>
           <Field label="Product Code"><Input value={form.product_code} onChange={set('product_code')} /></Field>
           <Field label="Location"><Input value={form.location} onChange={set('location')} /></Field>
           <Field label="Pack"><Input value={form.pack} onChange={set('pack')} placeholder="e.g. 3 x 5 kg" /></Field>
           <Field label="Special"><Input value={form.special} onChange={set('special')} /></Field>
-          <Field label="Weekly Slaughter"><Input value={form.weekly_slaughter} onChange={set('weekly_slaughter')} /></Field>
+          {isAnimalProtein && (
+            <Field label="Weekly Slaughter"><Input value={form.weekly_slaughter} onChange={set('weekly_slaughter')} /></Field>
+          )}
           <Field label="Pack Date"><Input type="date" value={form.pack_date} onChange={set('pack_date')} /></Field>
           <Field label="Shelf Life"><Input value={form.shelf_life} onChange={set('shelf_life')} placeholder="e.g. 18 months" /></Field>
         </div>
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          <Field label="Avg. Live Wt. — Current"><Input value={form.avg_live_wt_current} onChange={set('avg_live_wt_current')} /></Field>
-          <Field label="Avg. Live Wt. — Target"><Input value={form.avg_live_wt_target} onChange={set('avg_live_wt_target')} /></Field>
-        </div>
+        {isAnimalProtein && (
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <Field label="Avg. Live Wt. — Current"><Input value={form.avg_live_wt_current} onChange={set('avg_live_wt_current')} /></Field>
+            <Field label="Avg. Live Wt. — Target"><Input value={form.avg_live_wt_target} onChange={set('avg_live_wt_target')} /></Field>
+          </div>
+        )}
       </div>
 
       {/* Product Label Photos */}
@@ -219,7 +270,7 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
         </div>
       </div>
 
-      {/* Product Photos (up to 10, each with caption) */}
+      {/* Product Photos */}
       <div>
         <h3 className="text-sm font-bold uppercase tracking-wide text-primary border-b pb-1 mb-3">Product Photos</h3>
         <ProductPhotoUploader

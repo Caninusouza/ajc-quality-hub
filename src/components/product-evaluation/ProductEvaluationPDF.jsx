@@ -94,14 +94,22 @@ async function generatePDF(evaluation) {
   let y = HEADER_H + 8;
 
   // ── INFO TABLE ──
+  const ANIMAL_PROTEINS = ['Chicken', 'Turkey', 'Pork', 'Beef', 'Lamb', 'Fish/Seafood'];
+  const isAnimalProtein = ANIMAL_PROTEINS.includes(evaluation.product_category);
+
   const infoRows = [
     ['Supplier Name', evaluation.supplier_name, 'Product Name', evaluation.product_name],
+    ['Product Category', evaluation.product_category, 'Date', fmt(evaluation.date)],
     ['Plant No.', evaluation.plant_no, 'Product Code', evaluation.product_code],
     ['Brand', evaluation.brand, 'Location', evaluation.location],
     ['Pack', evaluation.pack, 'Special', evaluation.special],
-    ['Avg. Live Wt. (Current)', evaluation.avg_live_wt_current, 'Avg. Live Wt. (Target)', evaluation.avg_live_wt_target],
-    ['Weekly Slaughter', evaluation.weekly_slaughter, 'Pack Date', fmt(evaluation.pack_date)],
-    ['Shelf Life', evaluation.shelf_life, 'Date', fmt(evaluation.date)],
+    ...(isAnimalProtein ? [
+      ['Avg. Live Wt. (Current)', evaluation.avg_live_wt_current, 'Avg. Live Wt. (Target)', evaluation.avg_live_wt_target],
+      ['Weekly Slaughter', evaluation.weekly_slaughter, 'Pack Date', fmt(evaluation.pack_date)],
+    ] : [
+      ['Pack Date', fmt(evaluation.pack_date), '', ''],
+    ]),
+    ['Shelf Life', evaluation.shelf_life, '', ''],
   ];
 
   const cellH = 7;

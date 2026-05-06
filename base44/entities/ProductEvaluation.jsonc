@@ -12,6 +12,21 @@
     "product_name": {
       "type": "string"
     },
+    "product_category": {
+      "type": "string",
+      "enum": [
+        "Chicken",
+        "Turkey",
+        "Pork",
+        "Beef",
+        "Lamb",
+        "Fish/Seafood",
+        "Vegetables",
+        "Fruits",
+        "French Fries",
+        "Other"
+      ]
+    },
     "plant_no": {
       "type": "string"
     },
