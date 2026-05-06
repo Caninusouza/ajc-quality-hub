@@ -29,43 +29,77 @@ async function loadImageAsDataURL(url) {
   });
 }
 
+const AJC_LOGO_URL = 'https://media.base44.com/images/public/69f10cbc7366891a2d7229d7/cb8fdd247_AJC.png';
+
 async function generatePDF(evaluation) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = 210;
   const pageH = 297;
   const margin = 16;
   const contentW = pageW - margin * 2;
-  // 5 inches = 127mm
   const PHOTO_W = 127;
-  const HEADER_H = 20;
+  const HEADER_H = 22;
   const FOOTER_H = 10;
   const SAFE_BOTTOM = pageH - FOOTER_H;
 
-  const primaryColor = [27, 54, 100];
-  const lightBlue = [240, 244, 252];
-  const white = [255, 255, 255];
-  const darkText = [30, 30, 30];
-  const mutedText = [100, 110, 130];
+  // AJC Color scheme: navy + orange accent
+  const primaryColor = [27, 54, 100];   // AJC navy
+  const accentColor  = [220, 100, 30];  // AJC orange
+  const lightBlue    = [240, 244, 252];
+  const white        = [255, 255, 255];
+  const darkText     = [30, 30, 30];
+  const mutedText    = [100, 110, 130];
+
+  // Pre-load AJC logo
+  const logoResult = await loadImageAsDataURL(AJC_LOGO_URL);
 
   let pageNum = 1;
 
   const drawHeader = () => {
+    // Navy background
     doc.setFillColor(...primaryColor);
     doc.rect(0, 0, pageW, HEADER_H, 'F');
-    // Left title
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
+    // Orange accent stripe at bottom of header
+    doc.setFillColor(...accentColor);
+    doc.rect(0, HEADER_H - 1.5, pageW, 1.5, 'F');
+
+    // AJC Logo (white version loaded from URL, rendered small on left)
+    if (logoResult) {
+      // Logo height = 12mm, width proportional
+      const logoH = 12;
+      const logoW = logoH * (logoResult.w / logoResult.h);
+      doc.addImage(logoResult.dataUrl, 'PNG', margin, (HEADER_H - logoH) / 2, logoW, logoH);
+      // Title next to logo
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('AJC International', margin + logoW + 4, HEADER_H / 2 - 0.5);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(200, 215, 235);
+      doc.text('FOOD SAFETY & QUALITY ASSURANCE', margin + logoW + 4, HEADER_H / 2 + 4.5);
+    } else {
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('AJC International', margin, 14);
+    }
+    // Right: report label
     doc.setFont('helvetica', 'bold');
-    doc.text('AJC International', margin, 13);
-    // Right subtitle
     doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text('PRODUCT EVALUATION REPORT', pageW - margin, HEADER_H / 2 - 1, { align: 'right' });
     doc.setFont('helvetica', 'normal');
-    doc.text('Product Evaluation Report', pageW - margin, 13, { align: 'right' });
+    doc.setFontSize(7.5);
+    doc.setTextColor(200, 215, 235);
+    doc.text(fmt(evaluation.date), pageW - margin, HEADER_H / 2 + 4, { align: 'right' });
   };
 
   const drawFooter = () => {
-    doc.setFillColor(240, 244, 252);
+    doc.setFillColor(...lightBlue);
     doc.rect(0, pageH - FOOTER_H, pageW, FOOTER_H, 'F');
+    doc.setFillColor(...accentColor);
+    doc.rect(0, pageH - FOOTER_H, pageW, 0.8, 'F');
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...mutedText);
@@ -153,8 +187,7 @@ async function generatePDF(evaluation) {
     currentY = ensureSpace(12, currentY);
     doc.setFillColor(...primaryColor);
     doc.rect(margin, currentY, contentW, 7, 'F');
-    // accent left stripe
-    doc.setFillColor(220, 100, 30);
+    doc.setFillColor(...accentColor);
     doc.rect(margin, currentY, 3, 7, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
@@ -262,7 +295,20 @@ export default function ProductEvaluationPDF({ evaluation }) {
   const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const filename = `ProductEvaluation_${evaluation.supplier_name?.replace(/\s+/g, '_')}_${evaluation.date || 'draft'}.pdf`;
+  // Format: SupplierName PlantNo - ProductName - DD Mon YYYY
+  const buildFilename = () => {
+    const supplier = evaluation.supplier_name || 'Supplier';
+    const plant = evaluation.plant_no ? ` ${evaluation.plant_no}` : '';
+    const product = evaluation.product_name || 'Product';
+    let datePart = 'draft';
+    if (evaluation.date) {
+      try {
+        datePart = format(new Date(evaluation.date + 'T00:00:00'), 'd MMM yyyy');
+      } catch {}
+    }
+    return `${supplier}${plant} - ${product} - ${datePart}.pdf`.replace(/[/\\?%*:|"<>]/g, '-');
+  };
+  const filename = buildFilename();
 
   const handleDownload = async () => {
     setDownloading(true);
