@@ -430,8 +430,7 @@ async function generatePDF(evaluation) {
   }
 
   // ── PIECE WEIGHTS ──
-  const WEIGHT_GRID_CATEGORIES = ['Chicken', 'Pork'];
-  const hasWeights = WEIGHT_GRID_CATEGORIES.includes(evaluation.product_category) && (evaluation.piece_weights?.length || 0) > 0;
+  const hasWeights = ANIMAL_PROTEINS.includes(evaluation.product_category) && ['Chicken', 'Pork'].includes(evaluation.product_category) && (evaluation.piece_weights?.length || 0) > 0;
   
   if (hasWeights) {
     const weights = (evaluation.piece_weights || []).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
