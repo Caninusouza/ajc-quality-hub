@@ -8,6 +8,7 @@ import { base44 } from '@/api/base44Client';
 import { X, ImageIcon } from 'lucide-react';
 import USCityAutocomplete from '@/components/shared/USCityAutocomplete';
 import WeightGrid from '@/components/product-evaluation/WeightGrid';
+import { useAutosave } from '@/hooks/useAutosave';
 
 const DEFAULT = {
   date: '', supplier_name: '', product_name: '',
@@ -182,10 +183,15 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
   const setVal = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
+  // Autosave draft to sessionStorage every 5 seconds (silent, no UI change)
+  useAutosave(form, async (data) => {
+    sessionStorage.setItem(storageKey, JSON.stringify(data));
+  }, 5000);
+
   const isAnimalProtein = ANIMAL_PROTEINS.includes(form.product_category);
   const hasWeightGrid = WEIGHT_GRID_CATEGORIES.includes(form.product_category);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const cleaned = {
       ...form,
@@ -195,8 +201,13 @@ export default function ProductEvaluationForm({ initialData, onSave, onCancel, i
         ? (form.piece_weights || []).map(v => parseFloat(v) || null)
         : [],
     };
-    sessionStorage.removeItem(storageKey);
-    onSave(cleaned);
+    try {
+      await onSave(cleaned);
+      sessionStorage.removeItem(storageKey);
+    } catch (error) {
+      // Keep draft in storage if save fails
+      console.error('Save failed:', error);
+    }
   };
 
   const handleCancel = () => {
