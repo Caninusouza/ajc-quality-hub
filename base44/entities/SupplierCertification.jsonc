@@ -1,0 +1,63 @@
+{
+  "name": "SupplierCertification",
+  "type": "object",
+  "properties": {
+    "company_name": {
+      "type": "string"
+    },
+    "commodity": {
+      "type": "string"
+    },
+    "plant_est_no": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "English",
+        "Spanish",
+        "Portuguese",
+        "French"
+      ],
+      "default": "English"
+    },
+    "contact_name": {
+      "type": "string"
+    },
+    "contact_email": {
+      "type": "string"
+    },
+    "expiration_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Expiring Soon",
+        "Expired",
+        "Updated"
+      ],
+      "default": "Active"
+    },
+    "reminder1_sent": {
+      "type": "boolean",
+      "default": false
+    },
+    "reminder2_sent": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_name",
+    "expiration_date"
+  ]
+}

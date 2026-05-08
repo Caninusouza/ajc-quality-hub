@@ -18,6 +18,7 @@ import ClaimForms from '@/pages/ClaimForms';
 import SupplierIntakes from '@/pages/SupplierIntakes';
 import SupplierProductMaterials from '@/pages/SupplierProductMaterials';
 import ProductEvaluations from '@/pages/ProductEvaluations';
+import SupplierCertifications from '@/pages/SupplierCertifications';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -56,6 +57,7 @@ const AuthenticatedApp = () => {
         <Route path="/supplier-product-materials" element={<SupplierProductMaterials />} />
         <Route path="/claim-forms" element={<ClaimForms />} />
         <Route path="/product-evaluations" element={<ProductEvaluations />} />
+        <Route path="/supplier-certifications" element={<SupplierCertifications />} />
       </Route>
       <Route path="/my-requests" element={<MyRequests />} />
       <Route path="/claim-form" element={<ClaimFormPortal />} />
