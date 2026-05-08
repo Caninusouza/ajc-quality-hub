@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PageHeader from '@/components/shared/PageHeader';
 import { format, differenceInDays, parseISO } from 'date-fns';
-import { Search, ShieldCheck, Pencil, Trash2, Plus, Upload, Download } from 'lucide-react';
+import { Search, ShieldCheck, Pencil, Trash2, Plus, Upload, Paperclip, X, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 const STATUS_STYLES = {
@@ -49,13 +49,33 @@ function addDays(dateStr, days) {
 const EMPTY = {
   company_name: '', commodity: '', plant_est_no: '', location: '',
   language: 'English', contact_name: '', contact_email: '',
-  expiration_date: '', status: 'Active', notes: '',
+  expiration_date: '', status: 'Active', notes: '', file_attachments: [],
 };
 
 function CertForm({ initial, onSave, onClose, isSaving }) {
   const [form, setForm] = useState({ ...EMPTY, ...initial });
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const setVal = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    setUploading(true);
+    const uploaded = [];
+    for (const file of files) {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      uploaded.push({ name: file.name, url: file_url });
+    }
+    setForm(f => ({ ...f, file_attachments: [...(f.file_attachments || []), ...uploaded] }));
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  const removeAttachment = (idx) => {
+    setForm(f => ({ ...f, file_attachments: f.file_attachments.filter((_, i) => i !== idx) }));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -115,6 +135,25 @@ function CertForm({ initial, onSave, onClose, isSaving }) {
         <div className="space-y-1 col-span-2">
           <Label>Notes</Label>
           <Textarea value={form.notes} onChange={set('notes')} rows={2} />
+        </div>
+        <div className="space-y-2 col-span-2">
+          <Label>Certificate Files (PDF, images, etc.)</Label>
+          <div className="flex flex-wrap gap-2">
+            {(form.file_attachments || []).map((f, i) => (
+              <div key={i} className="flex items-center gap-1.5 bg-muted/50 border rounded-lg px-3 py-1.5 text-sm">
+                <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                <a href={f.url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate max-w-[180px]">{f.name}</a>
+                <button type="button" onClick={() => removeAttachment(i)} className="ml-1 text-muted-foreground hover:text-destructive">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+            <label className={`flex items-center gap-2 px-3 py-1.5 text-sm border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/40 transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+              <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-muted-foreground">{uploading ? 'Uploading...' : 'Attach files'}</span>
+              <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" className="hidden" onChange={handleFileUpload} />
+            </label>
+          </div>
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-2">
@@ -323,6 +362,7 @@ export default function SupplierCertifications() {
                 <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Reminder 2</th>
                 <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Status</th>
                 <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Lang</th>
+                <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Files</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -352,6 +392,19 @@ export default function SupplierCertifications() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{cert.language || '—'}</td>
+                  <td className="px-4 py-3">
+                    {(cert.file_attachments?.length || 0) > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {cert.file_attachments.map((f, i) => (
+                          <a key={i} href={f.url} target="_blank" rel="noopener noreferrer" title={f.name}
+                            className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5 hover:bg-blue-100">
+                            <FileText className="w-3 h-3" />
+                            <span className="max-w-[80px] truncate">{f.name}</span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditing(cert); setDialogOpen(true); }}>

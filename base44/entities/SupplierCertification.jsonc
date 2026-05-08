@@ -54,6 +54,20 @@
     },
     "notes": {
       "type": "string"
+    },
+    "file_attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "required": [
