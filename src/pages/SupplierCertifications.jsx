@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PageHeader from '@/components/shared/PageHeader';
 import { format, differenceInDays, parseISO } from 'date-fns';
-import { Search, ShieldCheck, Pencil, Trash2, Plus, Upload, Paperclip, X, FileText } from 'lucide-react';
+import { Search, ShieldCheck, Pencil, Trash2, Plus, Upload, Paperclip, X, FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 const STATUS_STYLES = {
@@ -199,6 +199,33 @@ export default function SupplierCertifications() {
     },
   });
 
+  const handleExport = async () => {
+    const all = await base44.entities.SupplierCertification.list('-expiration_date', 2000);
+    const exportData = all.map(c => ({
+      company_name: c.company_name || '',
+      commodity: c.commodity || '',
+      plant_est_no: c.plant_est_no || '',
+      location: c.location || '',
+      language: c.language || 'English',
+      contact_name: c.contact_name || '',
+      contact_email: c.contact_email || '',
+      expiration_date: c.expiration_date || '',
+      status: c.status || 'Active',
+      reminder1_sent: c.reminder1_sent || false,
+      reminder2_sent: c.reminder2_sent || false,
+      notes: c.notes || '',
+      file_attachments: c.file_attachments || [],
+    }));
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `supplier_certifications_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${exportData.length} records`);
+  };
+
   const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -289,6 +316,9 @@ export default function SupplierCertifications() {
         title="Supplier Certification Tracking"
         subtitle="Monitor GFSI/HACCP certificate expiration and automated reminders"
       >
+        <Button variant="outline" onClick={handleExport} className="gap-2">
+          <Download className="w-4 h-4" /> Export JSON
+        </Button>
         <label className={`cursor-pointer inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-md hover:bg-muted transition-colors ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
           <Upload className="w-4 h-4" />
           {importing ? 'Importing...' : 'Import Excel'}
