@@ -11,7 +11,6 @@ const ENTITIES = [
   { key: 'SupplierIntake', label: 'Supplier Intakes' },
   { key: 'SupplierProductMaterial', label: 'Supplier Product Materials' },
   { key: 'ProductEvaluation', label: 'Product Evaluations' },
-  { key: 'SupplierCertification', label: 'Supplier Certifications' },
   { key: 'ClaimForm', label: 'Claim Forms' },
   { key: 'Request', label: 'Requests' },
 ];
