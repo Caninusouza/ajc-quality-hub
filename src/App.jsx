@@ -19,6 +19,7 @@ import SupplierIntakes from '@/pages/SupplierIntakes';
 import SupplierProductMaterials from '@/pages/SupplierProductMaterials';
 import ProductEvaluations from '@/pages/ProductEvaluations';
 import SupplierCertifications from '@/pages/SupplierCertifications';
+import DataExport from '@/pages/DataExport';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -58,6 +59,7 @@ const AuthenticatedApp = () => {
         <Route path="/claim-forms" element={<ClaimForms />} />
         <Route path="/product-evaluations" element={<ProductEvaluations />} />
         <Route path="/supplier-certifications" element={<SupplierCertifications />} />
+        <Route path="/data-export" element={<DataExport />} />
       </Route>
       <Route path="/my-requests" element={<MyRequests />} />
       <Route path="/claim-form" element={<ClaimFormPortal />} />
