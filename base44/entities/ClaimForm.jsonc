@@ -108,34 +108,5 @@
     "contact_email",
     "product_name",
     "issue_description"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "user"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "created_by": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }
